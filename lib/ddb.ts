@@ -15,12 +15,8 @@ import { CognitoUser, UserProfile } from "@/data/types";
 const client = new DynamoDBClient({
   region: process.env.NEXT_PUBLIC_AWS_REGION || "us-west-2",
   credentials: {
-<<<<<<< HEAD
-
-=======
     accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY || "",
->>>>>>> 4e16851 (Profile creating successfully)
   },
 });
 
