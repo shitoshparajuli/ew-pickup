@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from 'aws-amplify/auth';
+import { getUserId, getUserProfile, saveUserProfile } from "@/lib/ddb";
+import { UserProfile } from "@/data/types";
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -14,8 +16,31 @@ export default function AuthCallback() {
       try {
         // In standard Amplify, we check for the current user
         const currentUser = await getCurrentUser();
+        console.log("currentUser", currentUser);
         
         if (currentUser) {
+          // Get the user ID from Cognito
+          const userId = currentUser.userId;
+          if (!userId) {
+            throw new Error("User ID not found");
+          }
+
+          // Check if user profile exists
+          const existingProfile = await getUserProfile(userId);
+          const timestamp = new Date().toISOString();
+          
+          // If no profile exists, create one with default values
+          if (!existingProfile) {
+            const newProfile: Omit<UserProfile, 'UserId'> = {
+              FirstName: "",
+              LastName: "",
+              PreferredPositions: [],
+              CreatedAt: timestamp,
+              UpdatedAt: ""
+            };
+            await saveUserProfile(userId, newProfile);
+          }
+
           setMessage("Sign-in successful! Redirecting...");
           setTimeout(() => router.push("/profile"), 1000);
         } else {

@@ -12,16 +12,15 @@ interface MessageState {
 
 export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
   const { user } = useAuth();
-  const userId = getUserId(user);
   
   const [formData, setFormData] = useState({
-    firstName: initialData.firstName || "",
-    lastName: initialData.lastName || "",
-    preferredPositions: initialData.preferredPositions || {
-      defender: 0,
-      midfielder: 0,
-      attacker: 0,
-    },
+    FirstName: initialData.FirstName || "",
+    LastName: initialData.LastName || "",
+    PreferredPositions: initialData.PreferredPositions || [
+      "Defender",
+      "Midfielder",
+      "Attacker"
+    ],
   });
   
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -38,8 +37,8 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
   const handlePositionChange = (position: keyof PreferredPositions, value: string): void => {
     setFormData((prev) => ({
       ...prev,
-      preferredPositions: {
-        ...prev.preferredPositions,
+      PreferredPositions: {
+        ...prev.PreferredPositions,
         [position]: parseInt(value),
       },
     }));
@@ -51,11 +50,11 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
     setMessage({ type: "", text: "" });
 
     try {
-      if (!userId) {
+      if (!user) {
         throw new Error("User not authenticated");
       }
       
-      await saveUserProfile(userId, formData);
+      await saveUserProfile(user.userId, formData);
 
       setMessage({
         type: "success",
@@ -87,14 +86,14 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
       )}
 
       <div className="mb-4">
-        <label htmlFor="firstName" className="block text-gray-700 font-medium mb-2">
+        <label htmlFor="FirstName" className="block text-gray-700 font-medium mb-2">
           First Name
         </label>
         <input
           type="text"
-          id="firstName"
-          name="firstName"
-          value={formData.firstName}
+          id="FirstName"
+          name="FirstName"
+          value={formData.FirstName}
           onChange={handleChange}
           className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
@@ -102,14 +101,14 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
       </div>
 
       <div className="mb-6">
-        <label htmlFor="lastName" className="block text-gray-700 font-medium mb-2">
+        <label htmlFor="LastName" className="block text-gray-700 font-medium mb-2">
           Last Name
         </label>
         <input
           type="text"
-          id="lastName"
-          name="lastName"
-          value={formData.lastName}
+          id="LastName"
+          name="LastName"
+          value={formData.LastName}
           onChange={handleChange}
           className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
@@ -118,58 +117,6 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
 
       <div className="mb-6">
         <h3 className="text-gray-700 font-medium mb-3">Preferred Positions (Rank 1-3)</h3>
-        <div className="space-y-3">
-          <div className="flex items-center">
-            <label htmlFor="defender" className="w-32 text-gray-700">
-              Defender:
-            </label>
-            <select
-              id="defender"
-              value={formData.preferredPositions.defender}
-              onChange={(e) => handlePositionChange("defender", e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="0">Not selected</option>
-              <option value="1">1st choice</option>
-              <option value="2">2nd choice</option>
-              <option value="3">3rd choice</option>
-            </select>
-          </div>
-
-          <div className="flex items-center">
-            <label htmlFor="midfielder" className="w-32 text-gray-700">
-              Midfielder:
-            </label>
-            <select
-              id="midfielder"
-              value={formData.preferredPositions.midfielder}
-              onChange={(e) => handlePositionChange("midfielder", e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="0">Not selected</option>
-              <option value="1">1st choice</option>
-              <option value="2">2nd choice</option>
-              <option value="3">3rd choice</option>
-            </select>
-          </div>
-
-          <div className="flex items-center">
-            <label htmlFor="attacker" className="w-32 text-gray-700">
-              Attacker:
-            </label>
-            <select
-              id="attacker"
-              value={formData.preferredPositions.attacker}
-              onChange={(e) => handlePositionChange("attacker", e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="0">Not selected</option>
-              <option value="1">1st choice</option>
-              <option value="2">2nd choice</option>
-              <option value="3">3rd choice</option>
-            </select>
-          </div>
-        </div>
       </div>
 
       <button

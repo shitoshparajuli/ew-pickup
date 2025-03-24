@@ -28,11 +28,11 @@ export default function ProfilePage() {
 
   const fetchUserProfile = async (): Promise<void> => {
     try {
-      const userId = getUserId(user);
-      if (!userId) {
+      if (!user) {
         throw new Error("User ID not found");
       }
-      
+      const userId = user.userId;
+      console.log("UserId: " + userId)
       const userProfile = await getUserProfile(userId);
       setProfile(userProfile || {});
     } catch (error) {

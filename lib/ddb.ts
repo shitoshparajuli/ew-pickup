@@ -13,9 +13,14 @@ import { CognitoUser, UserProfile } from "@/data/types";
 
 // Configure AWS credentials
 const client = new DynamoDBClient({
-  region: "us-west-2",
+  region: process.env.NEXT_PUBLIC_AWS_REGION || "us-west-2",
   credentials: {
+<<<<<<< HEAD
 
+=======
+    accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY || "",
+>>>>>>> 4e16851 (Profile creating successfully)
   },
 });
 
@@ -38,13 +43,27 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
   try {
     const command = new GetCommand({
       TableName,
-      Key: { userId },
+      Key: { UserId: userId },
     });
     
     const response: GetCommandOutput = await docClient.send(command);
+    console.log("DynamoDB request:", {
+      TableName,
+      Key: { UserId: userId },
+      command: command
+    });
+    console.log("DynamoDB response:", response);
     return response.Item as UserProfile | null;
   } catch (error) {
-    console.error("Error fetching user profile:", error);
+    console.error("Error fetching user profile:", {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      request: {
+        TableName,
+        Key: { UserId: userId }
+      }
+    });
     throw error;
   }
 }
@@ -52,7 +71,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 // Save user profile
 export async function saveUserProfile(
   userId: string, 
-  profileData: Omit<UserProfile, 'userId'>
+  profileData: Omit<UserProfile, 'UserId'>
 ): Promise<boolean> {
   if (!userId) throw new Error("User ID is required");
   
@@ -62,10 +81,10 @@ export async function saveUserProfile(
     const command = new PutCommand({
       TableName,
       Item: {
-        userId,
+        UserId: userId,
         ...profileData,
-        createdAt: profileData.createdAt || timestamp,
-        updatedAt: timestamp,
+        CreatedAt: profileData.CreatedAt || timestamp,
+        UpdatedAt: timestamp,
       },
     });
     
@@ -114,7 +133,7 @@ export async function updateUserProfile(
     
     const command = new UpdateCommand({
       TableName,
-      Key: { userId },
+      Key: { UserId: userId },
       UpdateExpression: updateExpression,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,

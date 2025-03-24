@@ -5,12 +5,12 @@ export interface PreferredPositions {
   }
   
   export interface UserProfile {
-    userId: string;
-    firstName: string;
-    lastName: string;
-    preferredPositions: PreferredPositions;
-    createdAt?: string;
-    updatedAt?: string;
+    UserId: string;
+    FirstName: string;
+    LastName: string;
+    PreferredPositions: string[];
+    CreatedAt?: string;
+    UpdatedAt?: string;
   }
   
   // Cognito/Amplify Auth types
