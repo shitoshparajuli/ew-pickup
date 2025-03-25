@@ -28,16 +28,16 @@
         "GOOGLE"
       ],
       "redirect_sign_in_uri": [
-        "http://localhost:3000/auth/callback"
+        "http://localhost:3000/auth/callback", "https://ew-pickup.vercel.app/auth/callback"
       ],
       "redirect_sign_out_uri": [
-        "http://localhost:3000"
+        "http://localhost:3000", "https://ew-pickup.vercel.app/"
       ],
       "logout_uri": [
-        "http://localhost:3000"
+        "http://localhost:3000", "https://ew-pickup.vercel.app/"
       ],
       "redirect_uri": [
-        "http://localhost:3000"
+        "http://localhost:3000", "https://ew-pickup.vercel.app/"
       ],
       "response_type": "code",
       "scopes": [

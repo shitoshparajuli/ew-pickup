@@ -17,6 +17,18 @@ export default function HomePage() {
             Sign in with your Google account to create a player profile and get started!
           </p>
         </div>
+
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <h2 className="text-2xl font-bold mb-4">Next Game</h2>
+          <p className="mb-6">
+            Our next pickup game is scheduled for Tuesday at 7:00 PM.
+          </p>
+          <a href="/check-in">
+            <button className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition duration-300">
+              I'm Playing
+            </button>
+          </a>
+        </div>
       </div>
     </div>
   );
