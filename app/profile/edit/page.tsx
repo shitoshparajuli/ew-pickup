@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ProfileForm from "@/components/ProfileForm";
 import { useAuth } from "@/context/AuthContext";
 import { getUserProfile } from "@/lib/ddb";
 import { UserProfile } from "@/data/types";
 import Link from "next/link";
 
-export default function ProfilePage() {
+export default function EditProfilePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<Partial<UserProfile> | null>(null);
@@ -59,33 +60,16 @@ export default function ProfilePage() {
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-lg mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Player Profile</h1>
+          <h1 className="text-3xl font-bold">Edit Profile</h1>
           <Link 
-            href="/profile/edit"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition"
+            href="/profile"
+            className="text-blue-600 hover:text-blue-700 font-medium"
           >
-            Edit Profile
+            Back to Profile
           </Link>
         </div>
-        
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="mb-6">
-            <h2 className="text-gray-600 text-sm">Name</h2>
-            <p className="text-xl">{profile?.FirstName} {profile?.LastName}</p>
-          </div>
-
-          <div className="mb-6">
-            <h2 className="text-gray-600 text-sm mb-2">Preferred Positions</h2>
-            <div className="space-y-1">
-              {profile?.PreferredPositions?.map((position, index) => (
-                <p key={position} className="text-lg">
-                  {index + 1}. {position}
-                </p>
-              ))}
-            </div>
-          </div>
-        </div>
+        <ProfileForm initialData={profile || {}} />
       </div>
     </div>
   );
-}
+} 

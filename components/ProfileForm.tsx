@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent, ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getUserId, saveUserProfile } from "@/lib/ddb";
 import { ProfileFormProps, PreferredPositions } from "@/data/types";
@@ -12,6 +13,7 @@ interface MessageState {
 
 export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
   const { user } = useAuth();
+  const router = useRouter();
   
   const [formData, setFormData] = useState({
     FirstName: initialData.FirstName || "",
@@ -60,6 +62,11 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
         type: "success",
         text: "Profile saved successfully!",
       });
+
+      // Redirect to profile view page after successful save
+      setTimeout(() => {
+        router.push("/profile");
+      }, 1500);
     } catch (error) {
       console.error("Error saving profile:", error);
       setMessage({
