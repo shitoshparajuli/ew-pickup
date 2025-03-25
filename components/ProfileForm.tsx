@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getUserId, saveUserProfile } from "@/lib/ddb";
 import { ProfileFormProps, PreferredPositions } from "@/data/types";
+import PositionRankingTabs from "./PositionRankingTabs";
 
 interface MessageState {
   type: "" | "success" | "error";
@@ -15,14 +16,22 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
   const { user } = useAuth();
   const router = useRouter();
   
+  const defaultPositions = [
+    "Defender - Center Back",
+    "Defender - Full Back",
+    "Defender - Wing Back",
+    "Midfielder - Defensive",
+    "Midfielder - Central",
+    "Midfielder - Attacking",
+    "Attacker - Winger",
+    "Attacker - Forward",
+    "Attacker - Striker"
+  ];
+  
   const [formData, setFormData] = useState({
     FirstName: initialData.FirstName || "",
     LastName: initialData.LastName || "",
-    PreferredPositions: initialData.PreferredPositions || [
-      "Defender",
-      "Midfielder",
-      "Attacker"
-    ],
+    PreferredPositions: initialData.PreferredPositions || defaultPositions,
   });
   
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -36,13 +45,10 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
     }));
   };
 
-  const handlePositionChange = (position: keyof PreferredPositions, value: string): void => {
+  const handlePositionsChange = (positions: string[]): void => {
     setFormData((prev) => ({
       ...prev,
-      PreferredPositions: {
-        ...prev.PreferredPositions,
-        [position]: parseInt(value),
-      },
+      PreferredPositions: positions,
     }));
   };
 
@@ -123,7 +129,13 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
       </div>
 
       <div className="mb-6">
-        <h3 className="text-gray-700 font-medium mb-3">Preferred Positions (Rank 1-3)</h3>
+        <h3 className="text-gray-700 font-medium mb-3">Preferred Positions</h3>
+        <div className="border rounded-lg p-4 bg-gray-50">
+          <PositionRankingTabs 
+            positions={formData.PreferredPositions} 
+            onChange={handlePositionsChange} 
+          />
+        </div>
       </div>
 
       <button
