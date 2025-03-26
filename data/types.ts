@@ -13,6 +13,24 @@ export interface PreferredPositions {
     UpdatedAt?: string;
   }
   
+  // Game types
+  export interface Player {
+    id: string;
+    name: string;
+    position: string;
+  }
+
+  export interface Game {
+    id: string;
+    date: string;
+    time: string;
+    location: string;
+    playersCount: number;
+    status: 'upcoming' | 'completed';
+    players: Player[];
+    result?: string;
+  }
+  
   // Cognito/Amplify Auth types
   export interface CognitoUser {
     username: string;

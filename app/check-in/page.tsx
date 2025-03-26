@@ -50,8 +50,8 @@ export default function CheckInPage() {
     // For example, send the data to your API
     console.log({ firstName, lastName, guests });
     
-    // Redirect to a confirmation page or back home
-    // router.push('/confirmation');
+    // Redirect to games/1
+    router.push('/games/1');
   };
 
   return (
