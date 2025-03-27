@@ -41,7 +41,7 @@ export default function HomePage() {
           ) : (
             <button
               onClick={() => signIn()}
-              className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-sm transition duration-200 font-bold flex items-center justify-center mx-auto cursor-pointer"
+              className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold flex items-center justify-center mx-auto cursor-pointer"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5 mr-2 opacity-80">
                 <path
