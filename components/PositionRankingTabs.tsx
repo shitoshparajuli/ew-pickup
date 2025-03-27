@@ -38,26 +38,18 @@ const SortableItem = ({ id }: SortableItemProps) => {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    padding: '10px',
-    marginBottom: '8px',
-    backgroundColor: 'white',
-    border: '1px solid #e5e7eb',
-    borderRadius: '4px',
-    cursor: 'grab',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center'
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
+      className="p-3 mb-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded cursor-grab flex justify-between items-center"
       {...attributes}
       {...listeners}
     >
-      <span className="font-medium">{id}</span>
-      <span className="text-gray-500 text-sm">
+      <span className="font-medium dark:text-white">{id}</span>
+      <span className="text-gray-500 dark:text-gray-300 text-sm">
         Drag to reorder
       </span>
     </div>
@@ -105,7 +97,7 @@ export default function PositionRankingTabs({ positions, onChange }: PositionRan
   return (
     <div>
       <div className="mb-4">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Preferred positions
         </h3>
         
@@ -124,7 +116,7 @@ export default function PositionRankingTabs({ positions, onChange }: PositionRan
                   <SortableItem key={position} id={position} />
                 ))
               ) : (
-                <div className="text-gray-500 text-center py-4">
+                <div className="text-gray-500 dark:text-gray-400 text-center py-4">
                   No positions available
                 </div>
               )}

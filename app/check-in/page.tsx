@@ -56,15 +56,15 @@ export default function CheckInPage() {
 
   return (
     <div className="container mx-auto py-12 px-4">
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold mb-6 text-center">Game Check-in</h1>
+      <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
+        <h1 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Game Check-in</h1>
         
         {authLoading || loading ? (
           <div className="text-center py-4">Loading...</div>
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 First Name
               </label>
               <input
@@ -72,13 +72,13 @@ export default function CheckInPage() {
                 id="firstName"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 required
               />
             </div>
             
             <div className="mb-4">
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Last Name
               </label>
               <input
@@ -86,20 +86,20 @@ export default function CheckInPage() {
                 id="lastName"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 required
               />
             </div>
             
             <div className="mb-6">
-              <label htmlFor="guests" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="guests" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Number of Guests
               </label>
               <div className="flex items-center">
                 <button 
                   type="button"
                   onClick={() => setGuests(Math.max(0, guests - 1))}
-                  className="px-3 py-1 bg-gray-200 rounded-l-md border border-gray-300"
+                  className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded-l-md border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer"
                 >
                   -
                 </button>
@@ -108,13 +108,13 @@ export default function CheckInPage() {
                   id="guests"
                   value={guests}
                   onChange={(e) => setGuests(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-16 text-center py-1 border-t border-b border-gray-300 focus:outline-none"
+                  className="w-16 text-center py-1 border-t border-b border-gray-300 dark:border-gray-700 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   min="0"
                 />
                 <button 
                   type="button"
                   onClick={() => setGuests(guests + 1)}
-                  className="px-3 py-1 bg-gray-200 rounded-r-md border border-gray-300"
+                  className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded-r-md border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer"
                 >
                   +
                 </button>
@@ -125,13 +125,13 @@ export default function CheckInPage() {
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition duration-300"
+                className="px-4 py-2 bg-transparent border border-gray-700 text-gray-700 dark:text-gray-300 rounded-sm hover:text-black dark:hover:text-white transition duration-300 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition duration-300"
+                className="px-4 py-2 bg-black border border-black text-white hover:bg-gray-800 rounded-sm transition duration-300 font-bold cursor-pointer"
               >
                 Confirm
               </button>

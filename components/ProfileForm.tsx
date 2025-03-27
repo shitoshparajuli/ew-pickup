@@ -85,13 +85,13 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-lg mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center">Your Profile</h2>
+    <form onSubmit={handleSubmit} className="max-w-lg mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-6 text-center dark:text-white">Your Profile</h2>
 
       {message.text && (
         <div
           className={`p-4 mb-6 rounded ${
-            message.type === "success" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+            message.type === "success" ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300" : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
           }`}
         >
           {message.text}
@@ -99,7 +99,7 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
       )}
 
       <div className="mb-4">
-        <label htmlFor="FirstName" className="block text-gray-700 font-medium mb-2">
+        <label htmlFor="FirstName" className="block text-gray-700 dark:text-gray-300 font-medium mb-2">
           First Name
         </label>
         <input
@@ -108,13 +108,13 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
           name="FirstName"
           value={formData.FirstName}
           onChange={handleChange}
-          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           required
         />
       </div>
 
       <div className="mb-6">
-        <label htmlFor="LastName" className="block text-gray-700 font-medium mb-2">
+        <label htmlFor="LastName" className="block text-gray-700 dark:text-gray-300 font-medium mb-2">
           Last Name
         </label>
         <input
@@ -123,14 +123,14 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
           name="LastName"
           value={formData.LastName}
           onChange={handleChange}
-          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           required
         />
       </div>
 
       <div className="mb-6">
-        <h3 className="text-gray-700 font-medium mb-3">Preferred Positions</h3>
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <h3 className="text-gray-700 dark:text-gray-300 font-medium mb-3">Preferred Positions</h3>
+        <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
           <PositionRankingTabs 
             positions={formData.PreferredPositions} 
             onChange={handlePositionsChange} 
@@ -141,7 +141,7 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+        className="w-full bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer disabled:opacity-50 focus:outline-none"
       >
         {isSubmitting ? "Saving..." : "Save Profile"}
       </button>

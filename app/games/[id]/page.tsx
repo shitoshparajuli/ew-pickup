@@ -55,7 +55,7 @@ export default function GamePage({ params }: GamePageProps) {
     return (
       <div className="container mx-auto py-12 px-4 text-center">
         <div className="max-w-4xl mx-auto">
-          <p className="text-xl">Loading game details...</p>
+          <p className="text-xl dark:text-gray-200">Loading game details...</p>
         </div>
       </div>
     );
@@ -65,10 +65,10 @@ export default function GamePage({ params }: GamePageProps) {
     return (
       <div className="container mx-auto py-12 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-3xl font-bold mb-6">Game Not Found</h1>
-          <p className="mb-8">We couldn't find the game you're looking for.</p>
+          <h1 className="text-3xl font-bold mb-6 dark:text-white">Game Not Found</h1>
+          <p className="mb-8 dark:text-gray-200">We couldn't find the game you're looking for.</p>
           <Link href="/games">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded">
+            <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
               Back to Games
             </button>
           </Link>
@@ -81,18 +81,18 @@ export default function GamePage({ params }: GamePageProps) {
     <div className="container mx-auto py-12 px-4">
       <style jsx>{fadeInAnimation}</style>
       <div className="max-w-4xl mx-auto">
-        <Link href="/games" className="text-blue-600 hover:text-blue-800 mb-6 inline-block">
+        <Link href="/games" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mb-6 inline-block">
           ← Back to Games
         </Link>
         
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h1 className="text-3xl font-bold mb-2"> EW Tuesaday pick-up</h1>
-          <p className="text-xl text-gray-700 mb-6">{game.date} at {game.time}</p>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 mb-8">
+          <h1 className="text-3xl font-bold mb-2">EW Tuesday pick-up</h1>
+          <p className="text-xl text-gray-700 dark:text-gray-300 mb-6">{game.date} at {game.time}</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div>
               <h2 className="text-xl font-semibold mb-2">Details</h2>
-              <ul className="space-y-2">
+              <ul className="space-y-2 dark:text-gray-200">
                 <li><span className="font-medium">Location:</span> {game.location}</li>
                 <li><span className="font-medium">Status:</span> {game.status === 'upcoming' ? 'Upcoming' : 'Completed'}</li>
                 <li><span className="font-medium">Players:</span> {game.playersCount}</li>
@@ -104,7 +104,7 @@ export default function GamePage({ params }: GamePageProps) {
             <div className="mb-8">
               <button 
                 onClick={() => router.push('/check-in')}
-                className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition duration-300"
+                className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
               >
                 Join This Game
               </button>
@@ -114,7 +114,7 @@ export default function GamePage({ params }: GamePageProps) {
           {game.status === 'completed' && game.result && (
             <div className="mb-8">
               <h2 className="text-xl font-semibold mb-2">Game Summary</h2>
-              <p>{game.result}</p>
+              <p className="dark:text-gray-200">{game.result}</p>
             </div>
           )}
           
@@ -125,7 +125,7 @@ export default function GamePage({ params }: GamePageProps) {
             <div className="overflow-x-auto mb-8">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {Array.from({ length: 28 }).map((_, index) => (
-                  <div key={`player-${index}`} className="bg-white border border-gray-200 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow">
+                  <div key={`player-${index}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">
                     <span className="font-medium">Player {index + 1}</span>
                   </div>
                 ))}
@@ -136,7 +136,7 @@ export default function GamePage({ params }: GamePageProps) {
             <div className="mb-8">
               <button 
                 onClick={() => setShowTeams(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded"
+                className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
               >
                 Generate Teams
               </button>
@@ -149,11 +149,11 @@ export default function GamePage({ params }: GamePageProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* Red Team */}
                   <div>
-                    <h3 className="text-lg font-medium mb-2 text-red-600">Red Team</h3>
-                    <div className="bg-red-50 rounded-lg p-4">
+                    <h3 className="text-lg font-medium mb-2 text-red-600 dark:text-red-400">Red Team</h3>
+                    <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
                       <div className="grid grid-cols-1 gap-2">
                         {Array.from({ length: 7 }).map((_, index) => (
-                          <div key={`red-${index}`} className="bg-white rounded-md p-2 shadow-sm text-center">
+                          <div key={`red-${index}`} className="bg-white dark:bg-gray-800 rounded-md p-2 shadow-sm text-center dark:text-gray-200">
                             Player {index + 1}
                           </div>
                         ))}
@@ -163,11 +163,11 @@ export default function GamePage({ params }: GamePageProps) {
                   
                   {/* Green Team */}
                   <div>
-                    <h3 className="text-lg font-medium mb-2 text-green-600">Green Team</h3>
-                    <div className="bg-green-50 rounded-lg p-4">
+                    <h3 className="text-lg font-medium mb-2 text-green-600 dark:text-green-400">Green Team</h3>
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
                       <div className="grid grid-cols-1 gap-2">
                         {Array.from({ length: 7 }).map((_, index) => (
-                          <div key={`green-${index}`} className="bg-white rounded-md p-2 shadow-sm text-center">
+                          <div key={`green-${index}`} className="bg-white dark:bg-gray-800 rounded-md p-2 shadow-sm text-center dark:text-gray-200">
                             Player {index + 8}
                           </div>
                         ))}
@@ -177,11 +177,11 @@ export default function GamePage({ params }: GamePageProps) {
                   
                   {/* Blue Team */}
                   <div>
-                    <h3 className="text-lg font-medium mb-2 text-blue-600">Blue Team</h3>
-                    <div className="bg-blue-50 rounded-lg p-4">
+                    <h3 className="text-lg font-medium mb-2 text-blue-600 dark:text-blue-400">Blue Team</h3>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
                       <div className="grid grid-cols-1 gap-2">
                         {Array.from({ length: 7 }).map((_, index) => (
-                          <div key={`blue-${index}`} className="bg-white rounded-md p-2 shadow-sm text-center">
+                          <div key={`blue-${index}`} className="bg-white dark:bg-gray-800 rounded-md p-2 shadow-sm text-center dark:text-gray-200">
                             Player {index + 15}
                           </div>
                         ))}
@@ -191,11 +191,11 @@ export default function GamePage({ params }: GamePageProps) {
                   
                   {/* Black Team */}
                   <div>
-                    <h3 className="text-lg font-medium mb-2 text-gray-800">Black Team</h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-300">Black Team</h3>
+                    <div className="bg-gray-50 dark:bg-gray-900/20 rounded-lg p-4">
                       <div className="grid grid-cols-1 gap-2">
                         {Array.from({ length: 7 }).map((_, index) => (
-                          <div key={`black-${index}`} className="bg-white rounded-md p-2 shadow-sm text-center">
+                          <div key={`black-${index}`} className="bg-white dark:bg-gray-800 rounded-md p-2 shadow-sm text-center dark:text-gray-200">
                             Player {index + 22}
                           </div>
                         ))}

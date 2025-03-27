@@ -19,9 +19,9 @@ export default function HomePage() {
             className="mx-auto mb-6"
             priority
           />
-        <h1 className="text-4xl font-bold mb-4 text-gray-800">Welcome to Everest Warriors</h1>
+        <h1 className="text-4xl font-bold mb-4">Welcome to Everest Warriors</h1>
         <p className="text-xl mb-8">
-          Join our for pick-up games and let's have fun!
+          Join us for pick-up games and let's have fun!
         </p>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
@@ -34,8 +34,8 @@ export default function HomePage() {
             <span className="text-gray-400">Loading...</span>
           ) : isAuthenticated ? (
             <Link href="/check-in">
-              <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-sm transition duration-200 font-bold cursor-pointer">
-                I'm Playing
+              <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
+                I'm Playing (Tap to check-in)
               </button>
             </Link>
           ) : (

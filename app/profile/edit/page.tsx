@@ -45,8 +45,8 @@ export default function EditProfilePage() {
     return (
       <div className="min-h-screen flex justify-center items-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Loading...</h1>
-          <p>Please wait while we load your profile.</p>
+          <h1 className="text-2xl font-bold mb-4 dark:text-white">Loading...</h1>
+          <p className="dark:text-gray-200">Please wait while we load your profile.</p>
         </div>
       </div>
     );
@@ -60,10 +60,10 @@ export default function EditProfilePage() {
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-lg mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Edit Profile</h1>
+          <h1 className="text-3xl font-bold dark:text-white">Edit Profile</h1>
           <Link 
             href="/profile"
-            className="text-blue-600 hover:text-blue-700 font-medium"
+            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
           >
             Back to Profile
           </Link>
