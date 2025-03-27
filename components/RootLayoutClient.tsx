@@ -3,6 +3,7 @@
 import { useEffect, ReactNode } from "react";
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { Amplify } from 'aws-amplify';
 import outputs from "../amplify_outputs.json"
 
@@ -17,7 +18,8 @@ export default function RootLayoutClient({ children }: RootLayoutClientProps) {
   return (
     <AuthProvider>
       <Navbar />
-      <main>{children}</main>
+      <main className="min-h-[calc(100vh-130px)]">{children}</main>
+      <Footer />
     </AuthProvider>
   );
 }
