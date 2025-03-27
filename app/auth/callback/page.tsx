@@ -39,10 +39,13 @@ export default function AuthCallback() {
               UpdatedAt: ""
             };
             await saveUserProfile(userId, newProfile);
+            
+            setMessage("Sign-in successful! Redirecting to edit profile...");
+            setTimeout(() => router.push("/profile/edit"), 1000);
+          } else {
+            setMessage("Sign-in successful! Redirecting to home...");
+            setTimeout(() => router.push("/"), 1000);
           }
-
-          setMessage("Sign-in successful! Redirecting...");
-          setTimeout(() => router.push("/profile"), 1000);
         } else {
           throw new Error("No authenticated user found");
         }

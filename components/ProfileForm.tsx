@@ -72,7 +72,7 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
       // Redirect to profile view page after successful save
       setTimeout(() => {
         router.push("/profile");
-      }, 1500);
+      }, 600);
     } catch (error) {
       console.error("Error saving profile:", error);
       setMessage({

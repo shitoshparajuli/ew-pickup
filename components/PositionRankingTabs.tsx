@@ -64,13 +64,23 @@ const SortableItem = ({ id }: SortableItemProps) => {
   );
 };
 
+const DEFAULT_POSITIONS = ['Attacker', 'Midfielder', 'Defender'];
+
 export default function PositionRankingTabs({ positions, onChange }: PositionRankingTabsProps) {
   const [rankedPositions, setRankedPositions] = useState<string[]>([]);
 
   // Initialize positions when they change
   useEffect(() => {
-    setRankedPositions([...positions]);
-  }, [positions]);
+    // Use default positions if the provided array is empty
+    const positionsToUse = positions.length > 0 ? positions : DEFAULT_POSITIONS;
+    setRankedPositions([...positionsToUse]);
+    
+    // If we're using default positions and they're different from what was passed in,
+    // notify parent component of the change
+    if (positions.length === 0 && DEFAULT_POSITIONS.length > 0) {
+      onChange([...DEFAULT_POSITIONS]);
+    }
+  }, [positions, onChange]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
