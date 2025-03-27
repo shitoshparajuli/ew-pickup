@@ -18,7 +18,7 @@ export default function Navbar() {
   return (
     <nav className="bg-black text-white py-3 px-4 border-b border-gray-800">
       <div className="container mx-auto flex justify-between items-center">
-        <div className="text-xl font-light tracking-wider">Soccer Pickup</div>
+        <Link href="/" className="text-xl font-semibold hover:text-gray-300 transition-colors duration-200">Everest Warriors</Link>
         
         {/* Mobile menu button */}
         <button 

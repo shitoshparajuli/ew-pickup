@@ -7,8 +7,8 @@ import { ReactNode } from "react";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Soccer Pickup App",
-  description: "Sign up for Tuesday evening pickup soccer games",
+  title: "Everest Warriors",
+  description: "Sign up for Tuesday evening pickup games",
 };
 
 interface RootLayoutProps {
