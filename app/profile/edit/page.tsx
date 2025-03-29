@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProfileForm from "@/components/ProfileForm";
 import { useAuth } from "@/context/AuthContext";
-import { getUserProfile } from "@/lib/ddb";
+import { getUserProfile } from "@/lib/ddb/users";
 import { UserProfile } from "@/data/types";
 import Link from "next/link";
 
