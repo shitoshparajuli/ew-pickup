@@ -12,7 +12,7 @@ export default function HomePage() {
     <div className="container mx-auto py-12 px-4">
       <div className="max-w-4xl mx-auto text-center">
       <Image
-            src="/images/logo.png?height=200&width=200"
+            src="/images/logo-new.JPG?height=200&width=200"
             alt="Everest Warriors Logo"
             width={200}
             height={200}
@@ -33,11 +33,20 @@ export default function HomePage() {
           {loading ? (
             <span className="text-gray-400">Loading...</span>
           ) : isAuthenticated ? (
-            <Link href="/check-in">
-              <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
-                I'm Playing (Tap to check-in)
-              </button>
-            </Link>
+            <div className="space-y-4">
+              <Link href="/check-in">
+                <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
+                  I'm Playing (Tap to check-in)
+                </button>
+              </Link>
+              <div>
+                <Link href="/games/create">
+                  <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
+                    Create New Game
+                  </button>
+                </Link>
+              </div>
+            </div>
           ) : (
             <button
               onClick={() => signIn()}
