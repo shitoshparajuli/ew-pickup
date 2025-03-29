@@ -47,7 +47,8 @@ export async function getNextGame() {
     const command = new QueryCommand({
       TableName: "Games",
       IndexName: "Status-index",
-      KeyConditionExpression: "#status = :status AND GameId >= :currentDate",
+      KeyConditionExpression: "#status = :status",
+      FilterExpression: "GameId >= :currentDate",
       ExpressionAttributeNames: {
         "#status": "Status"
       },
@@ -55,12 +56,21 @@ export async function getNextGame() {
         ":status": "UPCOMING",
         ":currentDate": currentDate
       },
-      Limit: 1,
-      ScanIndexForward: true // This ensures we get the earliest upcoming game
+      ScanIndexForward: true // This ensures we get results in ascending order
     });
 
-    const result = await docClient.send(command);
-    return result.Items?.[0] || null;
+    const result = await docClient.send(command);    
+    // Sort the items by GameId to ensure we get the earliest game
+    if (result.Items && result.Items.length > 0) {
+      const sortedItems = result.Items.sort((a, b) => {
+        if (a.GameId < b.GameId) return -1;
+        if (a.GameId > b.GameId) return 1;
+        return 0;
+      });
+      return sortedItems[0];
+    }
+    
+    return null;
   } catch (error) {
     console.error("Error getting next game:", error);
     throw error;
