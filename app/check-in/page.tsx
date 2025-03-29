@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserId, getUserProfile } from '@/lib/ddb';
+import { getUserId, getUserProfile } from '@/lib/ddb/users';
 import { useAuth } from '@/context/AuthContext';
 
 export default function CheckInPage() {

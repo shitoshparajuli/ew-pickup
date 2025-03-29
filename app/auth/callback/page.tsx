@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from 'aws-amplify/auth';
-import { getUserId, getUserProfile, saveUserProfile } from "@/lib/ddb";
+import { getUserId, getUserProfile, saveUserProfile } from "@/lib/ddb/users";
 import { UserProfile } from "@/data/types";
 
 export default function AuthCallback() {
