@@ -11,7 +11,14 @@ export default async function GamesPage() {
   return (
     <div className="container mx-auto py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 dark:text-white">Soccer Pickup Games</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold dark:text-white">Soccer Pickup Games</h1>
+          <Link href="/games/create">
+            <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
+              Create New Game
+            </button>
+          </Link>
+        </div>
         
         <section className="mb-10">
           <h2 className="text-2xl font-bold mb-4 dark:text-white">Upcoming Games</h2>
