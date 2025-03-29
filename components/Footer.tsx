@@ -14,7 +14,7 @@ export default function Footer() {
           <div className="flex items-center">
             <span className="text-gray-400 mr-2">Developed by Shitosh</span>
             <Link 
-              href="https://github.com/shitoshparajuli/" 
+              href="https://github.com/shitoshparajuli/ew-pickup" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center"

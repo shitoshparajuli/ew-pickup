@@ -11,9 +11,9 @@ export interface PreferredPositions {
     PreferredPositions: string[];
     CreatedAt?: string;
     UpdatedAt?: string;
+    IsMember?: boolean;
   }
   
-  // Game types
   export interface Player {
     id: string;
     name: string;

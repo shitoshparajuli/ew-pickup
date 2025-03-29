@@ -3,7 +3,7 @@
 import { useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getUserId, saveUserProfile } from "@/lib/ddb";
+import { saveUserProfile } from "@/lib/ddb/users";
 import { ProfileFormProps, PreferredPositions } from "@/data/types";
 import PositionRankingTabs from "./PositionRankingTabs";
 
@@ -17,15 +17,9 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
   const router = useRouter();
   
   const defaultPositions = [
-    "Defender - Center Back",
-    "Defender - Full Back",
-    "Defender - Wing Back",
-    "Midfielder - Defensive",
-    "Midfielder - Central",
-    "Midfielder - Attacking",
-    "Attacker - Winger",
-    "Attacker - Forward",
-    "Attacker - Striker"
+    "Defender",
+    "Midfielder",
+    "Attacker"
   ];
   
   const [formData, setFormData] = useState({
