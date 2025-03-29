@@ -86,21 +86,21 @@ export default function GamePage({ params }: GamePageProps) {
         </Link>
         
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 mb-8">
-          <h1 className="text-3xl font-bold mb-2">EW Tuesday pick-up</h1>
+          <h1 className="text-3xl font-bold mb-2 dark:text-white">EW Tuesday pick-up</h1>
           <p className="text-xl text-gray-700 dark:text-gray-300 mb-6">{game.date} at {game.time}</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div>
-              <h2 className="text-xl font-semibold mb-2">Details</h2>
+              <h2 className="text-xl font-semibold mb-2 dark:text-white">Details</h2>
               <ul className="space-y-2 dark:text-gray-200">
                 <li><span className="font-medium">Location:</span> {game.location}</li>
-                <li><span className="font-medium">Status:</span> {game.status === 'upcoming' ? 'Upcoming' : 'Completed'}</li>
+                <li><span className="font-medium">Status:</span> {game.status === 'UPCOMING' ? 'Upcoming' : 'Completed'}</li>
                 <li><span className="font-medium">Players:</span> {game.playersCount}</li>
               </ul>
             </div>
           </div>
           
-          {game.status === 'upcoming' && (
+          {game.status === 'UPCOMING' && (
             <div className="mb-8">
               <button 
                 onClick={() => router.push('/check-in')}
@@ -111,15 +111,8 @@ export default function GamePage({ params }: GamePageProps) {
             </div>
           )}
           
-          {game.status === 'completed' && game.result && (
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-2">Game Summary</h2>
-              <p className="dark:text-gray-200">{game.result}</p>
-            </div>
-          )}
-          
           <div>
-            <h2 className="text-xl font-semibold mb-4">Players</h2>
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">Players</h2>
             
             {/* Player List */}
             <div className="overflow-x-auto mb-8">

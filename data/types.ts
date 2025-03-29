@@ -23,12 +23,14 @@ export interface PreferredPositions {
   export interface Game {
     id: string;
     date: string;
+    day: string;
     time: string;
     location: string;
     playersCount: number;
-    status: 'upcoming' | 'completed';
-    players: Player[];
-    result?: string;
+    status: 'UPCOMING' | 'COMPLETED';
+    winner?: string;
+    loser?: string;
+    isPaid?: boolean;
   }
   
   // Cognito/Amplify Auth types
