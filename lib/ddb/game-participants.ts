@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({
   region: process.env.NEXT_PUBLIC_AWS_REGION,
@@ -14,12 +14,16 @@ const docClient = DynamoDBDocumentClient.from(client);
 interface CreateGameParticipantParams {
   gameId: string;
   userId: string;
+  firstName: string;
+  lastName: string;
   guestList?: string;
 }
 
 export async function createGameParticipant({ 
   gameId, 
   userId,
+  firstName,
+  lastName,
   guestList,
 }: CreateGameParticipantParams) {
   try {
@@ -30,6 +34,8 @@ export async function createGameParticipant({
       Item: {
         GameId: gameId,
         UserId: userId,
+        FirstName: firstName,
+        LastName: lastName,
         GuestList: guestList || "",
         CreatedAt: timestamp,
         UpdatedAt: timestamp,
@@ -40,6 +46,25 @@ export async function createGameParticipant({
     return { success: true };
   } catch (error) {
     console.error("Error creating game participant:", error);
+    throw error;
+  }
+}
+
+export async function getGameParticipants(gameId: string) {
+  try {
+    const command = new QueryCommand({
+      TableName: "Game-Participants",
+      KeyConditionExpression: "GameId = :gameId",
+      ExpressionAttributeValues: {
+        ":gameId": gameId
+      }
+    });
+
+    const response = await docClient.send(command);
+    
+    return response.Items || [];
+  } catch (error) {
+    console.error("Error getting game participants:", error);
     throw error;
   }
 }

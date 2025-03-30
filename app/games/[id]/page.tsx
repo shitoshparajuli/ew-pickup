@@ -4,8 +4,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Game } from '@/data/types';
-import { getGameById } from '@/lib/games';
 import { use } from 'react';
+import { getGameById } from '@/lib/ddb/games';
+import { getGameParticipants } from '@/lib/ddb/game-participants';
 
 // Animation keyframes
 const fadeInAnimation = `
@@ -27,6 +28,7 @@ export default function GamePage({ params }: GamePageProps) {
   const { id } = unwrappedParams;
   const router = useRouter();
   const [game, setGame] = useState<Game | null>(null);
+  const [participants, setParticipants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTeams, setShowTeams] = useState(false);
@@ -35,10 +37,25 @@ export default function GamePage({ params }: GamePageProps) {
     async function loadGame() {
       try {
         setLoading(true);
+        // Fetch game data
         const gameData = await getGameById(id);
-        setGame(gameData);
+        console.log('gameData', gameData);
+        
         if (!gameData) {
           setError('Game not found');
+          setLoading(false);
+          return;
+        }
+        
+        setGame(gameData);
+        
+        // Fetch participants
+        try {
+          const participantsData = await getGameParticipants(id);
+          setParticipants(participantsData);
+        } catch (participantErr) {
+          console.error('Failed to fetch participants:', participantErr);
+          // Don't fail the whole page if just participants fail to load
         }
       } catch (err) {
         console.error('Failed to fetch game:', err);
@@ -77,6 +94,12 @@ export default function GamePage({ params }: GamePageProps) {
     );
   }
 
+  // Safe access of game properties to avoid errors
+  const formattedDate = game?.date || '';
+  const formattedTime = game?.time || '';
+  const location = game?.location || '';
+  const status = game?.status || 'UNKNOWN';
+
   return (
     <div className="container mx-auto py-12 px-4">
       <style jsx>{fadeInAnimation}</style>
@@ -86,24 +109,34 @@ export default function GamePage({ params }: GamePageProps) {
         </Link>
         
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 mb-8">
-          <h1 className="text-3xl font-bold mb-2 dark:text-white">EW Tuesday pick-up</h1>
-          <p className="text-xl text-gray-700 dark:text-gray-300 mb-6">{game.date} at {game.time}</p>
+          <h1 className="text-3xl font-bold mb-2 dark:text-white">EW pick-up game</h1>
+          <p className="text-xl text-gray-700 dark:text-gray-300 mb-6">
+            {game?.date ? new Date(game.date + "T00:00:00-08:00").toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : ''} at {(() => {
+              // Convert from 24-hour to 12-hour time format with AM/PM
+              if (!game?.time) return '';
+              const [hours, minutes] = game.time.split(':');
+              const hour = parseInt(hours, 10);
+              const amPm = hour >= 12 ? 'PM' : 'AM';
+              const hour12 = hour % 12 || 12; // Convert 0 to 12 for 12 AM
+              return `${hour12}:${minutes} ${amPm}`;
+            })()}
+          </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div>
               <h2 className="text-xl font-semibold mb-2 dark:text-white">Details</h2>
               <ul className="space-y-2 dark:text-gray-200">
-                <li><span className="font-medium">Location:</span> {game.location}</li>
-                <li><span className="font-medium">Status:</span> {game.status === 'UPCOMING' ? 'Upcoming' : 'Completed'}</li>
-                <li><span className="font-medium">Players:</span> {game.playersCount}</li>
+                <li><span className="font-medium">Location:</span> {location}</li>
+                <li><span className="font-medium">Status:</span> {status === 'UPCOMING' ? 'Upcoming' : 'Completed'}</li>
+                <li><span className="font-medium">Players:</span> {participants.length}</li>
               </ul>
             </div>
           </div>
           
-          {game.status === 'UPCOMING' && (
+          {status === 'UPCOMING' && (
             <div className="mb-8">
               <button 
-                onClick={() => router.push('/check-in')}
+                onClick={() => router.push(`/check-in?gameId=${id}`)}
                 className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
               >
                 Join This Game
@@ -112,30 +145,41 @@ export default function GamePage({ params }: GamePageProps) {
           )}
           
           <div>
-            <h2 className="text-xl font-semibold mb-4 dark:text-white">Players</h2>
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">Players ({participants.length})</h2>
             
             {/* Player List */}
             <div className="overflow-x-auto mb-8">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {Array.from({ length: 28 }).map((_, index) => (
-                  <div key={`player-${index}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">
-                    <span className="font-medium">Player {index + 1}</span>
+                {participants.length > 0 ? (
+                  participants.map((participant, index) => (
+                    <div key={`player-${participant.UserId}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">
+                      <span className="font-medium">{participant.FirstName} {participant.LastName}</span>
+                      {participant.GuestList && participant.GuestList.length > 0 && (
+                        <span className="block text-sm text-gray-500 dark:text-gray-400">+{participant.GuestList.split(',').length} guests</span>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-4 dark:text-gray-300">
+                    No players registered yet
                   </div>
-                ))}
+                )}
               </div>
             </div>
             
-            {/* Generate Teams Button */}
-            <div className="mb-8">
-              <button 
-                onClick={() => setShowTeams(true)}
-                className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
-              >
-                Generate Teams
-              </button>
-            </div>
+            {/* Generate Teams Button - only show if there are players */}
+            {participants.length > 0 && (
+              <div className="mb-8">
+                <button 
+                  onClick={() => setShowTeams(true)}
+                  className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
+                >
+                  Generate Teams
+                </button>
+              </div>
+            )}
             
-            {/* Teams Section */}
+            {/* Teams Section - still using hardcoded teams as mentioned in instructions */}
             {showTeams && (
               <div className="animate-fade-in">
                 <h2 className="text-xl font-semibold mb-4">Teams</h2>

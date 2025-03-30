@@ -26,7 +26,7 @@ export interface PreferredPositions {
     day: string;
     time: string;
     location: string;
-    playersCount: number;
+    playersCount?: number;
     status: 'UPCOMING' | 'COMPLETED';
     winner?: string;
     loser?: string;

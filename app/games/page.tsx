@@ -1,12 +1,11 @@
 import Link from 'next/link';
 import { Game } from '@/data/types';
-import { getAllGames } from '@/lib/games';
+import { getUpcomingGames, getPastGames } from '@/lib/ddb/games';
 
 export default async function GamesPage() {
-  // Fetch games using our utility function
-  const games = await getAllGames();
-  const upcomingGames = games.filter(game => game.status === 'UPCOMING');
-  const pastGames = games.filter(game => game.status === 'COMPLETED');
+  // Fetch upcoming and past games separately using our new functions
+  const upcomingGames = await getUpcomingGames(5);
+  const pastGames = await getPastGames(5);
 
   return (
     <div className="container mx-auto py-12 px-4">

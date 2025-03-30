@@ -108,6 +108,8 @@ function CheckInContent() {
       await createGameParticipant({
         gameId,
         userId: user.userId,
+        firstName,
+        lastName,
         guestList: guestListString
       });
       
