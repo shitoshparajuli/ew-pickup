@@ -5,6 +5,7 @@ import { getUpcomingGames, getPastGames } from '@/lib/ddb/games';
 export default async function GamesPage() {
   // Fetch upcoming and past games separately using our new functions
   const upcomingGames = await getUpcomingGames(5);
+  console.log('upcomingGames', upcomingGames);
   const pastGames = await getPastGames(5);
 
   return (
