@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, QueryCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({
   region: process.env.NEXT_PUBLIC_AWS_REGION,
@@ -65,6 +65,44 @@ export async function getGameParticipants(gameId: string) {
     return response.Items || [];
   } catch (error) {
     console.error("Error getting game participants:", error);
+    throw error;
+  }
+}
+
+export async function isUserParticipatingInGame(gameId: string, userId: string) {
+  try {
+    const command = new QueryCommand({
+      TableName: "Game-Participants",
+      KeyConditionExpression: "GameId = :gameId AND UserId = :userId",
+      ExpressionAttributeValues: {
+        ":gameId": gameId,
+        ":userId": userId
+      }
+    });
+
+    const response = await docClient.send(command);
+    
+    return response.Items && response.Items.length > 0;
+  } catch (error) {
+    console.error("Error checking if user is participating in game:", error);
+    throw error;
+  }
+}
+
+export async function deleteGameParticipant(gameId: string, userId: string) {
+  try {
+    const command = new DeleteCommand({
+      TableName: "Game-Participants",
+      Key: {
+        GameId: gameId,
+        UserId: userId
+      }
+    });
+
+    await docClient.send(command);
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting game participant:", error);
     throw error;
   }
 }

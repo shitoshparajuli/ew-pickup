@@ -6,7 +6,8 @@ import { useState, useEffect } from 'react';
 import { Game } from '@/data/types';
 import { use } from 'react';
 import { getGameById } from '@/lib/ddb/games';
-import { getGameParticipants } from '@/lib/ddb/game-participants';
+import { getGameParticipants, isUserParticipatingInGame, deleteGameParticipant } from '@/lib/ddb/game-participants';
+import { useAuth } from '@/context/AuthContext';
 
 // Animation keyframes
 const fadeInAnimation = `
@@ -27,11 +28,14 @@ export default function GamePage({ params }: GamePageProps) {
   const unwrappedParams = use(params);
   const { id } = unwrappedParams;
   const router = useRouter();
+  const { user } = useAuth();
   const [game, setGame] = useState<Game | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTeams, setShowTeams] = useState(false);
+  const [isParticipating, setIsParticipating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
     async function loadGame() {
@@ -53,6 +57,12 @@ export default function GamePage({ params }: GamePageProps) {
         try {
           const participantsData = await getGameParticipants(id);
           setParticipants(participantsData);
+          
+          // Check if current user is participating
+          if (user) {
+            const participating = await isUserParticipatingInGame(id, user.userId);
+            setIsParticipating(!!participating);
+          }
         } catch (participantErr) {
           console.error('Failed to fetch participants:', participantErr);
           // Don't fail the whole page if just participants fail to load
@@ -66,7 +76,39 @@ export default function GamePage({ params }: GamePageProps) {
     }
     
     loadGame();
-  }, [id]);
+  }, [id, user]);
+  
+  const handleParticipationAction = async () => {
+    if (!user) {
+      // If not logged in, just redirect to check-in
+      router.push(`/check-in?gameId=${id}`);
+      return;
+    }
+    
+    if (isParticipating) {
+      // Handle bail out action
+      try {
+        setIsLoading(true);
+        await deleteGameParticipant(id, user.userId);
+        // Update local state
+        setIsParticipating(false);
+
+        const updatedParticipants = await getGameParticipants(id);
+        setParticipants(updatedParticipants);
+        
+        // Reload the page to refresh the participants list
+        router.refresh();
+      } catch (error) {
+        console.error("Failed to bail out:", error);
+        alert("Failed to remove you from the game. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Handle join action - redirect to check-in
+      router.push(`/check-in?gameId=${id}`);
+    }
+  };
   
   if (loading) {
     return (
@@ -136,10 +178,13 @@ export default function GamePage({ params }: GamePageProps) {
           {status === 'UPCOMING' && (
             <div className="mb-8">
               <button 
-                onClick={() => router.push(`/check-in?gameId=${id}`)}
-                className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
+                onClick={handleParticipationAction}
+                className={`${isParticipating ? 'bg-red-600 hover:bg-red-700' : 'bg-black hover:bg-gray-800'} border border-black text-white px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                disabled={isLoading}
               >
-                Join This Game
+                {isLoading 
+                  ? (isParticipating ? 'Bailing out...' : 'Joining...') 
+                  : (isParticipating ? 'Cowardly bail out' : 'Join This Game')}
               </button>
             </div>
           )}

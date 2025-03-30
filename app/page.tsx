@@ -5,12 +5,15 @@ import Link from "next/link";
 import Image from "next/image"
 import { useEffect, useState } from "react";
 import { getNextGame } from "@/lib/ddb/games";
+import { isUserParticipatingInGame } from "@/lib/ddb/game-participants";
 
 export default function HomePage() {
   const { user, loading, signIn } = useAuth();
   const isAuthenticated = !!user;
   const [nextGame, setNextGame] = useState<Record<string, any> | null>(null);
   const [loadingGame, setLoadingGame] = useState(false);
+  const [isParticipating, setIsParticipating] = useState(false);
+  const [checkingParticipation, setCheckingParticipation] = useState(false);
 
   useEffect(() => {
     async function fetchNextGame() {
@@ -19,7 +22,19 @@ export default function HomePage() {
           setLoadingGame(true);
           const game = await getNextGame();
           setNextGame(game);
-          console.log("Next game:", game);
+          console.log("user:", user);
+          
+          if (game && user) {
+            setCheckingParticipation(true);
+            try {
+              const participating = await isUserParticipatingInGame(game.GameId, user.userId);
+              setIsParticipating(!!participating);
+            } catch (error) {
+              console.error("Failed to check participation status:", error);
+            } finally {
+              setCheckingParticipation(false);
+            }
+          }
         } catch (error) {
           console.error("Failed to fetch next game:", error);
         } finally {
@@ -29,7 +44,7 @@ export default function HomePage() {
     }
 
     fetchNextGame();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -97,11 +112,24 @@ export default function HomePage() {
                 })()}.
               </p>
               <div className="space-y-4">
-                <Link href={`/check-in?gameId=${nextGame.GameId}`}>
-                  <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
-                    I'm Playing (Tap to check-in)
-                  </button>
-                </Link>
+                {checkingParticipation ? (
+                  <span className="text-gray-400">Checking participation status...</span>
+                ) : isParticipating ? (
+                  <div className="space-y-4">
+                    <p className="text-green-600 font-medium">You're checked in for this game!</p>
+                    <Link href={`/games/${nextGame.GameId}`}>
+                      <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
+                        View Game Details
+                      </button>
+                    </Link>
+                  </div>
+                ) : (
+                  <Link href={`/check-in?gameId=${nextGame.GameId}`}>
+                    <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
+                      Join Game (Tap to check-in)
+                    </button>
+                  </Link>
+                )}
               </div>
             </>
           ) : (
