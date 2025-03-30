@@ -1,17 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getUserId, getUserProfile } from '@/lib/ddb/users';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { getUserProfile } from '@/lib/ddb/users';
+import { createGameParticipant } from '@/lib/ddb/game-participants';
 import { useAuth } from '@/context/AuthContext';
 
-export default function CheckInPage() {
+// Create a client component that uses the hooks
+function CheckInContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const gameId = searchParams.get('gameId');
   const { user, loading: authLoading } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [guests, setGuests] = useState(0);
+  const [guestsList, setGuestsList] = useState<Array<{name: string}>>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     async function fetchUserProfile() {
@@ -44,14 +51,74 @@ export default function CheckInPage() {
     }
   }, [user, authLoading]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Here you would handle the form submission
-    // For example, send the data to your API
-    console.log({ firstName, lastName, guests });
+  // Check if gameId is available
+  useEffect(() => {
+    if (!gameId && !loading && !authLoading) {
+      setError('No game ID provided. Please go back and select a game.');
+    } else {
+      setError('');
+    }
+  }, [gameId, loading, authLoading]);
+
+  const handleGuestChange = (index: number, value: string) => {
+    const updatedGuests = [...guestsList];
+    updatedGuests[index] = { ...updatedGuests[index], name: value };
+    setGuestsList(updatedGuests);
+  };
+
+  const updateGuestCount = (newCount: number) => {
+    const count = Math.max(0, newCount);
+    setGuests(count);
     
-    // Redirect to games/1
-    router.push('/games/1');
+    // Adjust the guestsList array based on new count
+    if (count > guestsList.length) {
+      // Add new empty guest entries
+      const newGuests = [...guestsList];
+      for (let i = guestsList.length; i < count; i++) {
+        newGuests.push({ name: '' });
+      }
+      setGuestsList(newGuests);
+    } else if (count < guestsList.length) {
+      // Remove excess guest entries
+      setGuestsList(guestsList.slice(0, count));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user?.userId) {
+      setError('No user ID available. Please log in.');
+      return;
+    }
+    
+    if (!gameId) {
+      setError('No game ID provided. Please go back and select a game.');
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      setError('');
+      
+      // Format guest names as a comma-separated string
+      const guestListString = guestsList.map(guest => guest.name.trim()).filter(name => name).join(', ');
+      
+      // Save the participant data
+      await createGameParticipant({
+        gameId,
+        userId: user.userId,
+        guestList: guestListString
+      });
+      
+      // Redirect to the game page
+      router.push(`/games/${gameId}`);
+    } catch (error) {
+      console.error("Error saving participant data:", error);
+      setError('Failed to save check-in data. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -61,6 +128,16 @@ export default function CheckInPage() {
         
         {authLoading || loading ? (
           <div className="text-center py-4">Loading...</div>
+        ) : error ? (
+          <div className="text-center py-4">
+            <p className="text-red-500 mb-4">{error}</p>
+            <button
+              onClick={() => router.back()}
+              className="px-4 py-2 bg-black border border-black text-white hover:bg-gray-800 rounded-sm transition duration-300 font-bold cursor-pointer"
+            >
+              Go Back
+            </button>
+          </div>
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
@@ -98,7 +175,7 @@ export default function CheckInPage() {
               <div className="flex items-center">
                 <button 
                   type="button"
-                  onClick={() => setGuests(Math.max(0, guests - 1))}
+                  onClick={() => updateGuestCount(guests - 1)}
                   className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded-l-md border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer"
                 >
                   -
@@ -107,19 +184,46 @@ export default function CheckInPage() {
                   type="number"
                   id="guests"
                   value={guests}
-                  onChange={(e) => setGuests(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) => updateGuestCount(Math.max(0, parseInt(e.target.value) || 0))}
                   className="w-16 text-center py-1 border-t border-b border-gray-300 dark:border-gray-700 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   min="0"
                 />
                 <button 
                   type="button"
-                  onClick={() => setGuests(guests + 1)}
+                  onClick={() => updateGuestCount(guests + 1)}
                   className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded-r-md border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer"
                 >
                   +
                 </button>
               </div>
             </div>
+            
+            {guests > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Guest Information</h3>
+                {guestsList.map((guest, index) => (
+                  <div key={index} className="mb-4 p-3 border border-gray-200 dark:border-gray-700 rounded-md">
+                    <h4 className="text-sm font-medium mb-2">Guest {index + 1}</h4>
+                    <div>
+                      <label 
+                        htmlFor={`guest-${index}-name`} 
+                        className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                      >
+                        Name
+                      </label>
+                      <input
+                        type="text"
+                        id={`guest-${index}-name`}
+                        value={guest.name}
+                        onChange={(e) => handleGuestChange(index, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                        required
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             
             <div className="flex justify-between">
               <button
@@ -131,14 +235,27 @@ export default function CheckInPage() {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-black border border-black text-white hover:bg-gray-800 rounded-sm transition duration-300 font-bold cursor-pointer"
+                disabled={submitting}
+                className="px-4 py-2 bg-black border border-black text-white hover:bg-gray-800 rounded-sm transition duration-300 font-bold cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Confirm
+                {submitting ? 'Saving...' : 'Confirm'}
               </button>
             </div>
           </form>
         )}
       </div>
     </div>
+  );
+}
+
+export default function CheckInPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto py-12 px-4">
+      <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
+        <div className="text-center py-4">Loading...</div>
+      </div>
+    </div>}>
+      <CheckInContent />
+    </Suspense>
   );
 } 

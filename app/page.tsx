@@ -19,6 +19,7 @@ export default function HomePage() {
           setLoadingGame(true);
           const game = await getNextGame();
           setNextGame(game);
+          console.log("Next game:", game);
         } catch (error) {
           console.error("Failed to fetch next game:", error);
         } finally {
@@ -96,7 +97,7 @@ export default function HomePage() {
                 })()}.
               </p>
               <div className="space-y-4">
-                <Link href="/check-in">
+                <Link href={`/check-in?gameId=${nextGame.GameId}`}>
                   <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
                     I'm Playing (Tap to check-in)
                   </button>
