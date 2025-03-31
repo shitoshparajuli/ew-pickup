@@ -26,7 +26,6 @@ const TableName = "Users";
 
 // Get user ID from Cognito user
 export function getUserId(user: CognitoUser | null): string | null {
-  // For Cognito user from Google federation, the ID is typically in sub
   if (user && user.attributes?.sub) {
     return user.attributes.sub;
   }
@@ -123,7 +122,7 @@ export async function getBatchPlayers(
         players.push({
           uuid: item.UserId,
           name: `${item.FirstName} ${item.LastName}`,
-          rating: 0, // Default rating, adjust as needed
+          rating: item.Rating || 7, // Default rating, adjust as needed
           position: item.PreferredPositions as Position[] || []
         });
       });

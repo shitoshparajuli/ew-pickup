@@ -164,7 +164,6 @@ export default function GamePage({ params }: GamePageProps) {
 
       // If no players were retrieved, fallback to generating players from participant data
       if (players.length === 0) {
-        await generateTeamsFromParticipants();
         return;
       }
       
@@ -179,81 +178,6 @@ export default function GamePage({ params }: GamePageProps) {
           player.position = ['Midfielder'];
         }
       });
-      
-      // Use the selected team count from state
-      // Only allow 4 teams if we have at least 8 players
-      const teamCount = players.length >= 8 ? selectedTeamCount : 2;
-      
-      console.log('Generating teams with', players.length, 'players into', teamCount, 'teams');
-      
-      const generatedTeams = divideTeams(players, teamCount as 2 | 4);
-      setTeams(generatedTeams);
-      setShowTeams(true);
-      
-      // Store teams in the database with simplified player objects
-      try {
-        // Create a simplified version of teams with only name and UserId for each player
-        const simplifiedTeamsForStorage: SimplifiedTeam[] = generatedTeams.map(team => ({
-          players: team.players.map(player => ({
-            name: player.name,
-            UserId: player.uuid
-          }))
-        }));
-        
-        const result = await storeGameTeams(id, simplifiedTeamsForStorage);
-        if (result.success) {
-          console.log('Teams stored successfully in database');
-        }
-      } catch (storeError) {
-        console.error('Failed to store teams in database:', storeError);
-        // Don't show alert to user, as teams are still displayed on the page
-      }
-    } catch (error) {
-      console.error('Failed to generate teams:', error);
-      alert('Failed to generate teams. Please try again.');
-    }
-  };
-  
-  // Fallback method to generate teams from participant data
-  const generateTeamsFromParticipants = async () => {
-    try {
-      // Convert participants to properly formatted Player objects
-      const players = participants.map((participant, index) => {
-        // Try to extract position preferences from participant data
-        let position: Position[] = [];
-        
-        if (participant.PreferredPositions && Array.isArray(participant.PreferredPositions)) {
-          position = participant.PreferredPositions.map((pos: string) => {
-            // Convert position strings to Position type
-            if (pos === 'defender' || pos === 'Defender') return 'Defender';
-            if (pos === 'midfielder' || pos === 'Midfielder') return 'Midfielder';
-            if (pos === 'attacker' || pos === 'Attacker') return 'Attacker';
-            return 'Midfielder'; // Default for unrecognized positions
-          }) as Position[];
-        }
-        
-        // Default to midfielder if no positions specified
-        if (position.length === 0) {
-          position = ['Midfielder'];
-        }
-        
-        // Generate a random rating between 6.5 and 8.5 for each player
-        // In a real app, this could come from player stats or profiles
-        const rating = 7.5 + (Math.random() * 2 - 1);
-        
-        return {
-          uuid: participant.UserId || `player-${index}`,
-          name: `${participant.FirstName} ${participant.LastName}`,
-          position,
-          rating
-        } as Player;
-      });
-      
-      // If not enough players, don't proceed
-      if (players.length < 2) {
-        alert('Not enough players to generate teams. Minimum 2 players required.');
-        return;
-      }
       
       // Use the selected team count from state
       // Only allow 4 teams if we have at least 8 players
@@ -375,32 +299,17 @@ export default function GamePage({ params }: GamePageProps) {
               <h2 className="text-xl font-semibold mb-4 dark:text-white">Team Generation</h2>
               
               {/* Team Count Selector */}
-              <div className="mb-4">
-                <label className="block mb-2 font-medium dark:text-white">Number of Teams:</label>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setSelectedTeamCount(2)}
-                    className={`px-6 py-2 rounded-md font-medium border-2 transition-all ${
-                      selectedTeamCount === 2 
-                        ? 'bg-black text-white border-black dark:bg-blue-600 dark:border-blue-600 shadow-md transform scale-105' 
-                        : 'bg-white text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'
-                    }`}
-                  >
-                    2 Teams
-                    {selectedTeamCount === 2 && <span className="ml-2">✓</span>}
-                  </button>
-                  <button
-                    onClick={() => setSelectedTeamCount(4)}
-                    className={`px-6 py-2 rounded-md font-medium border-2 transition-all ${
-                      selectedTeamCount === 4 
-                        ? 'bg-black text-white border-black dark:bg-blue-600 dark:border-blue-600 shadow-md transform scale-105' 
-                        : 'bg-white text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'
-                    }`}
-                  >
-                    4 Teams
-                    {selectedTeamCount === 4 && <span className="ml-2">✓</span>}
-                  </button>
-                </div>
+              <div className="mb-4 flex items-center gap-3">
+                <label htmlFor="teamCount" className="font-medium dark:text-white whitespace-nowrap">Number of Teams:</label>
+                <select
+                  id="teamCount"
+                  value={selectedTeamCount}
+                  onChange={(e) => setSelectedTeamCount(parseInt(e.target.value) as 2 | 4)}
+                  className="px-4 py-2 rounded-full border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                >
+                  <option value={2}>2 Teams</option>
+                  <option value={4}>4 Teams</option>
+                </select>
               </div>
               
               {/* Generate Teams Button */}
