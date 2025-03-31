@@ -87,6 +87,7 @@ export interface Player {
 
 export interface Team {
   players: Player[];
+  elo: number;
 }
 
 export interface TeamStats {

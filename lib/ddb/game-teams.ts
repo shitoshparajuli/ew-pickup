@@ -145,13 +145,13 @@ export function gameTeamsToArray(gameTeams: GameTeams): Team[] {
 function convertToTeam(teamData: any): Team {
   return {
     players: teamData.players.map((player: any) => {
-      // Map from simplified player (with just name and UserId) to full Player type
       return {
-        uuid: player.UserId || player.uuid || "",
-        name: player.name || "",
-        rating: player.rating || 7, // Default rating if not provided
-        position: player.position || ['Midfielder'] // Default position if not provided
-      } as Player;
-    })
+        name: player.name,
+        uuid: player.UserId,
+        rating: 7, // Default rating
+        position: ['Midfielder'] // Default position
+      };
+    }),
+    elo: 0 // Initialize with 0, will be calculated when teams are loaded
   };
 }

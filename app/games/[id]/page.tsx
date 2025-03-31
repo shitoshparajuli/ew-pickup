@@ -49,7 +49,6 @@ export default function GamePage({ params }: GamePageProps) {
         setLoading(true);
         // Fetch game data
         const gameData = await getGameById(id);
-        console.log('gameData', gameData);
         
         if (!gameData) {
           setError('Game not found');
@@ -63,7 +62,6 @@ export default function GamePage({ params }: GamePageProps) {
         try {
           const participantsData = await getGameParticipants(id);
           setParticipants(participantsData);
-          console.log('participantsData', participantsData);
           
           // Check if current user is participating
           if (user) {
@@ -160,7 +158,6 @@ export default function GamePage({ params }: GamePageProps) {
       
       // Fetch player data from Users table using batch get
       const { players } = await getBatchPlayers(userIds);
-      console.log('players', players);
 
       // If no players were retrieved, fallback to generating players from participant data
       if (players.length === 0) {
@@ -186,7 +183,16 @@ export default function GamePage({ params }: GamePageProps) {
       console.log('Generating teams with', players.length, 'players into', teamCount, 'teams');
       
       const generatedTeams = divideTeams(players, teamCount as 2 | 4);
+      
       setTeams(generatedTeams);
+      
+      // Log team ELO values
+      console.log('Team ELO values:', generatedTeams.map((team, index) => ({
+        team: index + 1,
+        elo: team.elo,
+        players: team.players.length
+      })));
+      
       setShowTeams(true);
       
       // Store teams in the database with simplified player objects

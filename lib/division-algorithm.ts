@@ -23,8 +23,8 @@ export function divideTeams(players: Player[], numTeams: 2 | 4, randomSeed = Mat
     return (b.rating + randomFactorB) - (a.rating + randomFactorA);
   });
 
-  // Initialize teams
-  const teams: Team[] = Array.from({ length: numTeams }, () => ({ players: [] }));
+  // Initialize teams with empty players array and 0 elo
+  const teams: Team[] = Array.from({ length: numTeams }, () => ({ players: [], elo: 0 }));
 
   // Calculate players per team
   const playersPerTeam = Math.floor(players.length / numTeams);
@@ -41,6 +41,11 @@ export function divideTeams(players: Player[], numTeams: 2 | 4, randomSeed = Mat
   
   // Optimize team composition
   optimizeTeams(teams, teamSizes);
+
+  // Calculate final ELO for each team
+  teams.forEach(team => {
+    team.elo = team.players.reduce((sum, player) => sum + player.rating, 0);
+  });
 
   return teams;
 }
