@@ -8,6 +8,8 @@ import { use } from 'react';
 import { getGameById } from '@/lib/ddb/games';
 import { getGameParticipants, isUserParticipatingInGame, deleteGameParticipant } from '@/lib/ddb/game-participants';
 import { useAuth } from '@/context/AuthContext';
+import { divideTeams } from '@/lib/division-algorithm';
+import { Position, Player, Team } from '@/data/types';
 
 // Animation keyframes
 const fadeInAnimation = `
@@ -36,6 +38,7 @@ export default function GamePage({ params }: GamePageProps) {
   const [showTeams, setShowTeams] = useState(false);
   const [isParticipating, setIsParticipating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [teams, setTeams] = useState<Team[]>([]);
   
   useEffect(() => {
     async function loadGame() {
@@ -107,6 +110,47 @@ export default function GamePage({ params }: GamePageProps) {
     } else {
       // Handle join action - redirect to check-in
       router.push(`/check-in?gameId=${id}`);
+    }
+  };
+  
+  const generateTeams = () => {
+    // Convert participants to Player objects required by the algorithm
+    const players: Player[] = participants.map((participant, index) => {
+      // Determine position array - in this case using PreferredPositions if available
+      // or defaulting to an empty array
+      const position: Position[] = participant.PreferredPositions 
+        ? participant.PreferredPositions.map((pos: string) => {
+            // Convert position strings to Position type
+            if (pos === 'defender' || pos === 'Defender') return 'Defender';
+            if (pos === 'midfielder' || pos === 'Midfielder') return 'Midfielder';
+            if (pos === 'attacker' || pos === 'Attacker') return 'Attacker';
+            return 'Midfielder'; // Default
+          })
+        : [];
+      
+      // Generate a random rating between 5 and 10 for demo purposes
+      // In a real app, this might come from a player's profile or match history
+      const rating = 7.5 + (Math.random() * 2 - 1); // Random rating between 6.5 and 8.5
+      
+      return {
+        uuid: participant.UserId,
+        name: `${participant.FirstName} ${participant.LastName}`,
+        rating,
+        position
+      };
+    });
+    
+    // Determine the number of teams (2 or 4) based on player count
+    const numTeams = players.length >= 16 ? 4 : 2;
+    
+    try {
+      // Use the division algorithm to create balanced teams
+      const generatedTeams = divideTeams(players, numTeams as 2 | 4);
+      setTeams(generatedTeams);
+      setShowTeams(true);
+    } catch (error) {
+      console.error('Failed to generate teams:', error);
+      alert('Failed to generate teams. Please try again.');
     }
   };
   
@@ -216,7 +260,7 @@ export default function GamePage({ params }: GamePageProps) {
             {participants.length > 0 && (
               <div className="mb-8">
                 <button 
-                  onClick={() => setShowTeams(true)}
+                  onClick={generateTeams}
                   className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
                 >
                   Generate Teams
@@ -224,66 +268,45 @@ export default function GamePage({ params }: GamePageProps) {
               </div>
             )}
             
-            {/* Teams Section - still using hardcoded teams as mentioned in instructions */}
-            {showTeams && (
+            {/* Teams Section - Using the division algorithm */}
+            {showTeams && teams.length > 0 && (
               <div className="animate-fade-in">
-                <h2 className="text-xl font-semibold mb-4">Teams</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Red Team */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-2 text-red-600 dark:text-red-400">Red Team</h3>
-                    <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
-                      <div className="grid grid-cols-1 gap-2">
-                        {Array.from({ length: 7 }).map((_, index) => (
-                          <div key={`red-${index}`} className="bg-white dark:bg-gray-800 rounded-md p-2 shadow-sm text-center dark:text-gray-200">
-                            Player {index + 1}
+                <h2 className="text-xl font-semibold mb-4 dark:text-white">Teams</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {teams.map((team, teamIndex) => {
+                    // Color map for teams
+                    const teamColors = [
+                      { name: 'Red Team', bgClass: 'bg-red-50 dark:bg-red-900/20', textClass: 'text-red-600 dark:text-red-400' },
+                      { name: 'Green Team', bgClass: 'bg-green-50 dark:bg-green-900/20', textClass: 'text-green-600 dark:text-green-400' },
+                      { name: 'Blue Team', bgClass: 'bg-blue-50 dark:bg-blue-900/20', textClass: 'text-blue-600 dark:text-blue-400' },
+                      { name: 'Black Team', bgClass: 'bg-gray-50 dark:bg-gray-900/20', textClass: 'text-gray-800 dark:text-gray-300' }
+                    ];
+                    
+                    const color = teamColors[teamIndex % teamColors.length];
+                    
+                    return (
+                      <div key={`team-${teamIndex}`}>
+                        <h3 className={`text-lg font-medium mb-2 ${color.textClass}`}>{color.name}</h3>
+                        <div className={`${color.bgClass} rounded-lg p-4`}>
+                          <div className="grid grid-cols-1 gap-2">
+                            {team.players.map((player, playerIndex) => (
+                              <div 
+                                key={`${teamIndex}-${playerIndex}`} 
+                                className="bg-white dark:bg-gray-800 rounded-md p-2 shadow-sm text-center dark:text-gray-200"
+                              >
+                                {player.name}
+                                {player.position && player.position.length > 0 && (
+                                  <span className="block text-xs text-gray-500 dark:text-gray-400">
+                                    {player.position[0]}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  
-                  {/* Green Team */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-2 text-green-600 dark:text-green-400">Green Team</h3>
-                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-                      <div className="grid grid-cols-1 gap-2">
-                        {Array.from({ length: 7 }).map((_, index) => (
-                          <div key={`green-${index}`} className="bg-white dark:bg-gray-800 rounded-md p-2 shadow-sm text-center dark:text-gray-200">
-                            Player {index + 8}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Blue Team */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-2 text-blue-600 dark:text-blue-400">Blue Team</h3>
-                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                      <div className="grid grid-cols-1 gap-2">
-                        {Array.from({ length: 7 }).map((_, index) => (
-                          <div key={`blue-${index}`} className="bg-white dark:bg-gray-800 rounded-md p-2 shadow-sm text-center dark:text-gray-200">
-                            Player {index + 15}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Black Team */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-300">Black Team</h3>
-                    <div className="bg-gray-50 dark:bg-gray-900/20 rounded-lg p-4">
-                      <div className="grid grid-cols-1 gap-2">
-                        {Array.from({ length: 7 }).map((_, index) => (
-                          <div key={`black-${index}`} className="bg-white dark:bg-gray-800 rounded-md p-2 shadow-sm text-center dark:text-gray-200">
-                            Player {index + 22}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
