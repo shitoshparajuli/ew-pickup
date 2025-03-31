@@ -10,6 +10,8 @@ import { getGameParticipants, isUserParticipatingInGame, deleteGameParticipant }
 import { useAuth } from '@/context/AuthContext';
 import { divideTeams } from '@/lib/division-algorithm';
 import { Position, Player, Team } from '@/data/types';
+import { getBatchPlayers } from '@/lib/ddb/users';
+import { storeGameTeams, getGameTeams, gameTeamsToArray, SimplifiedPlayer, SimplifiedTeam } from '@/lib/ddb/game-teams';
 
 // Animation keyframes
 const fadeInAnimation = `
@@ -39,6 +41,7 @@ export default function GamePage({ params }: GamePageProps) {
   const [isParticipating, setIsParticipating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeamCount, setSelectedTeamCount] = useState<2 | 4>(2);
   
   useEffect(() => {
     async function loadGame() {
@@ -60,11 +63,29 @@ export default function GamePage({ params }: GamePageProps) {
         try {
           const participantsData = await getGameParticipants(id);
           setParticipants(participantsData);
+          console.log('participantsData', participantsData);
           
           // Check if current user is participating
           if (user) {
             const participating = await isUserParticipatingInGame(id, user.userId);
             setIsParticipating(!!participating);
+          }
+          
+          // Fetch teams if they exist for this game
+          try {
+            const gameTeams = await getGameTeams(id);
+            if (gameTeams) {
+              const teamsArray = gameTeamsToArray(gameTeams);
+              if (teamsArray.length > 0) {
+                setTeams(teamsArray);
+                setShowTeams(true);
+                // Set team count based on the number of teams loaded
+                setSelectedTeamCount(teamsArray.length > 2 ? 4 : 2);
+              }
+            }
+          } catch (teamsErr) {
+            console.error('Failed to fetch teams:', teamsErr);
+            // Don't fail the page load if teams fail to load
           }
         } catch (participantErr) {
           console.error('Failed to fetch participants:', participantErr);
@@ -113,41 +134,155 @@ export default function GamePage({ params }: GamePageProps) {
     }
   };
   
-  const generateTeams = () => {
-    // Convert participants to Player objects required by the algorithm
-    const players: Player[] = participants.map((participant, index) => {
-      // Determine position array - in this case using PreferredPositions if available
-      // or defaulting to an empty array
-      const position: Position[] = participant.PreferredPositions 
-        ? participant.PreferredPositions.map((pos: string) => {
+  const generateTeams = async () => {
+    try {
+      // Check if teams already exist
+      if (showTeams && teams.length > 0) {
+        const confirmRegenerate = window.confirm(
+          "Teams are already generated. Generating again will override the current teams and reassign players. Is that okay?"
+        );
+        
+        if (!confirmRegenerate) {
+          return; // Exit if user cancels
+        }
+      }
+      
+      // Use actual participant data
+      console.log('Using actual participant data for team generation');
+      
+      if (participants.length < 2) {
+        alert('Not enough players to generate teams. Minimum 2 players required.');
+        return;
+      }
+      
+      // Extract user IDs from participants
+      const userIds = participants.map(participant => participant.UserId).filter(Boolean);
+      
+      // Fetch player data from Users table using batch get
+      const { players } = await getBatchPlayers(userIds);
+      console.log('players', players);
+
+      // If no players were retrieved, fallback to generating players from participant data
+      if (players.length === 0) {
+        await generateTeamsFromParticipants();
+        return;
+      }
+      
+      // Rating 7 is default
+      players.forEach(player => {
+        if (!player.rating || player.rating === 0) {
+          player.rating = 7;
+        }
+        
+        // Ensure position array exists
+        if (!player.position || player.position.length === 0) {
+          player.position = ['Midfielder'];
+        }
+      });
+      
+      // Use the selected team count from state
+      // Only allow 4 teams if we have at least 8 players
+      const teamCount = players.length >= 8 ? selectedTeamCount : 2;
+      
+      console.log('Generating teams with', players.length, 'players into', teamCount, 'teams');
+      
+      const generatedTeams = divideTeams(players, teamCount as 2 | 4);
+      setTeams(generatedTeams);
+      setShowTeams(true);
+      
+      // Store teams in the database with simplified player objects
+      try {
+        // Create a simplified version of teams with only name and UserId for each player
+        const simplifiedTeamsForStorage: SimplifiedTeam[] = generatedTeams.map(team => ({
+          players: team.players.map(player => ({
+            name: player.name,
+            UserId: player.uuid
+          }))
+        }));
+        
+        const result = await storeGameTeams(id, simplifiedTeamsForStorage);
+        if (result.success) {
+          console.log('Teams stored successfully in database');
+        }
+      } catch (storeError) {
+        console.error('Failed to store teams in database:', storeError);
+        // Don't show alert to user, as teams are still displayed on the page
+      }
+    } catch (error) {
+      console.error('Failed to generate teams:', error);
+      alert('Failed to generate teams. Please try again.');
+    }
+  };
+  
+  // Fallback method to generate teams from participant data
+  const generateTeamsFromParticipants = async () => {
+    try {
+      // Convert participants to properly formatted Player objects
+      const players = participants.map((participant, index) => {
+        // Try to extract position preferences from participant data
+        let position: Position[] = [];
+        
+        if (participant.PreferredPositions && Array.isArray(participant.PreferredPositions)) {
+          position = participant.PreferredPositions.map((pos: string) => {
             // Convert position strings to Position type
             if (pos === 'defender' || pos === 'Defender') return 'Defender';
             if (pos === 'midfielder' || pos === 'Midfielder') return 'Midfielder';
             if (pos === 'attacker' || pos === 'Attacker') return 'Attacker';
-            return 'Midfielder'; // Default
-          })
-        : [];
+            return 'Midfielder'; // Default for unrecognized positions
+          }) as Position[];
+        }
+        
+        // Default to midfielder if no positions specified
+        if (position.length === 0) {
+          position = ['Midfielder'];
+        }
+        
+        // Generate a random rating between 6.5 and 8.5 for each player
+        // In a real app, this could come from player stats or profiles
+        const rating = 7.5 + (Math.random() * 2 - 1);
+        
+        return {
+          uuid: participant.UserId || `player-${index}`,
+          name: `${participant.FirstName} ${participant.LastName}`,
+          position,
+          rating
+        } as Player;
+      });
       
-      // Generate a random rating between 5 and 10 for demo purposes
-      // In a real app, this might come from a player's profile or match history
-      const rating = 7.5 + (Math.random() * 2 - 1); // Random rating between 6.5 and 8.5
+      // If not enough players, don't proceed
+      if (players.length < 2) {
+        alert('Not enough players to generate teams. Minimum 2 players required.');
+        return;
+      }
       
-      return {
-        uuid: participant.UserId,
-        name: `${participant.FirstName} ${participant.LastName}`,
-        rating,
-        position
-      };
-    });
-    
-    // Determine the number of teams (2 or 4) based on player count
-    const numTeams = players.length >= 16 ? 4 : 2;
-    
-    try {
-      // Use the division algorithm to create balanced teams
-      const generatedTeams = divideTeams(players, numTeams as 2 | 4);
+      // Use the selected team count from state
+      // Only allow 4 teams if we have at least 8 players
+      const teamCount = players.length >= 8 ? selectedTeamCount : 2;
+      
+      console.log('Generating teams with', players.length, 'players into', teamCount, 'teams');
+      
+      const generatedTeams = divideTeams(players, teamCount as 2 | 4);
       setTeams(generatedTeams);
       setShowTeams(true);
+      
+      // Store teams in the database with simplified player objects
+      try {
+        // Create a simplified version of teams with only name and UserId for each player
+        const simplifiedTeamsForStorage: SimplifiedTeam[] = generatedTeams.map(team => ({
+          players: team.players.map(player => ({
+            name: player.name,
+            UserId: player.uuid
+          }))
+        }));
+        
+        const result = await storeGameTeams(id, simplifiedTeamsForStorage);
+        if (result.success) {
+          console.log('Teams stored successfully in database');
+        }
+      } catch (storeError) {
+        console.error('Failed to store teams in database:', storeError);
+        // Don't show alert to user, as teams are still displayed on the page
+      }
     } catch (error) {
       console.error('Failed to generate teams:', error);
       alert('Failed to generate teams. Please try again.');
@@ -234,39 +369,48 @@ export default function GamePage({ params }: GamePageProps) {
           )}
           
           <div>
-            <h2 className="text-xl font-semibold mb-4 dark:text-white">Players ({participants.length})</h2>
             
-            {/* Player List */}
-            <div className="overflow-x-auto mb-8">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {participants.length > 0 ? (
-                  participants.map((participant, index) => (
-                    <div key={`player-${participant.UserId}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">
-                      <span className="font-medium">{participant.FirstName} {participant.LastName}</span>
-                      {participant.GuestList && participant.GuestList.length > 0 && (
-                        <span className="block text-sm text-gray-500 dark:text-gray-400">+{participant.GuestList.split(',').length} guests</span>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="col-span-full text-center py-4 dark:text-gray-300">
-                    No players registered yet
-                  </div>
-                )}
+            {/* Team Generation Section - always show regardless of participant count */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4 dark:text-white">Team Generation</h2>
+              
+              {/* Team Count Selector */}
+              <div className="mb-4">
+                <label className="block mb-2 font-medium dark:text-white">Number of Teams:</label>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setSelectedTeamCount(2)}
+                    className={`px-6 py-2 rounded-md font-medium border-2 transition-all ${
+                      selectedTeamCount === 2 
+                        ? 'bg-black text-white border-black dark:bg-blue-600 dark:border-blue-600 shadow-md transform scale-105' 
+                        : 'bg-white text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'
+                    }`}
+                  >
+                    2 Teams
+                    {selectedTeamCount === 2 && <span className="ml-2">✓</span>}
+                  </button>
+                  <button
+                    onClick={() => setSelectedTeamCount(4)}
+                    className={`px-6 py-2 rounded-md font-medium border-2 transition-all ${
+                      selectedTeamCount === 4 
+                        ? 'bg-black text-white border-black dark:bg-blue-600 dark:border-blue-600 shadow-md transform scale-105' 
+                        : 'bg-white text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'
+                    }`}
+                  >
+                    4 Teams
+                    {selectedTeamCount === 4 && <span className="ml-2">✓</span>}
+                  </button>
+                </div>
               </div>
+              
+              {/* Generate Teams Button */}
+              <button 
+                onClick={generateTeams}
+                className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
+              >
+                {showTeams && teams.length > 0 ? 'Regenerate Teams' : 'Generate Teams'}
+              </button>
             </div>
-            
-            {/* Generate Teams Button - only show if there are players */}
-            {participants.length > 0 && (
-              <div className="mb-8">
-                <button 
-                  onClick={generateTeams}
-                  className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
-                >
-                  Generate Teams
-                </button>
-              </div>
-            )}
             
             {/* Teams Section - Using the division algorithm */}
             {showTeams && teams.length > 0 && (
@@ -295,11 +439,6 @@ export default function GamePage({ params }: GamePageProps) {
                                 className="bg-white dark:bg-gray-800 rounded-md p-2 shadow-sm text-center dark:text-gray-200"
                               >
                                 {player.name}
-                                {player.position && player.position.length > 0 && (
-                                  <span className="block text-xs text-gray-500 dark:text-gray-400">
-                                    {player.position[0]}
-                                  </span>
-                                )}
                               </div>
                             ))}
                           </div>
@@ -310,6 +449,32 @@ export default function GamePage({ params }: GamePageProps) {
                 </div>
               </div>
             )}
+
+            {/* Add gap/spacing here */}
+            <div className="mb-12"></div>
+
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">Players ({participants.length})</h2>
+            
+            {/* Player List */}
+            <div className="overflow-x-auto mb-8">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {participants.length > 0 ? (
+                  participants.map((participant, index) => (
+                    <div key={`player-${participant.UserId}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">
+                      <span className="font-medium">{participant.FirstName} {participant.LastName}</span>
+                      {participant.GuestList && participant.GuestList.length > 0 && (
+                        <span className="block text-sm text-gray-500 dark:text-gray-400">+{participant.GuestList.split(',').length} guests</span>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-4 dark:text-gray-300">
+                    No players registered yet
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
