@@ -323,7 +323,7 @@ export default function GamePage({ params }: GamePageProps) {
                 onClick={generateTeams}
                 className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
               >
-                {showTeams && teams.length > 0 ? 'Regenerate Teams' : 'Generate Teams'}
+                {showTeams && teams.length > 0 ? 'Re-Shuffle Teams' : 'Generate Teams'}
               </button>
             </div>
             
