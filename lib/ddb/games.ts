@@ -44,8 +44,9 @@ export async function createGame({ date, startTime, location, isPaid }: CreateGa
 
 export async function getNextGame() {
   try {
-    const currentDate = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
-    
+    const currentDate = new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }).split(',')[0].split('/').map(part => part.padStart(2, '0')).join('-');
+    console.log("currentDate:", currentDate);
+
     const command = new QueryCommand({
       TableName: "Games",
       IndexName: "Status-index",
@@ -161,7 +162,7 @@ export async function getAllGames(): Promise<Game[]> {
 
 export async function getUpcomingGames(limit: number = 5): Promise<Game[]> {
   try {
-    const currentDate = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+    const currentDate = new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }).split(',')[0].split('/').map(part => part.padStart(2, '0')).join('-');
     
     const command = new QueryCommand({
       TableName: "Games",
