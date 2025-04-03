@@ -10,7 +10,7 @@ export const metadata = {
   title: "Everest Warriors",
   description: "Sign up for pickup games",
   icons: {
-    icon: "/images/logo-new.JPG",
+    icon: "/images/logo-ew.png",
   },
 };
 

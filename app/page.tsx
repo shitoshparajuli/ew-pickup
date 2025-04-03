@@ -50,7 +50,7 @@ export default function HomePage() {
     <div className="container mx-auto py-12 px-4">
       <div className="max-w-4xl mx-auto text-center">
       <Image
-            src="/images/logo-new.JPG?height=200&width=200"
+            src="/images/logo-ew.png?height=200&width=200"
             alt="Everest Warriors Logo"
             width={200}
             height={200}
