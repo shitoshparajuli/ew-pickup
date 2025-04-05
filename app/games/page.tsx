@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { Game } from '@/data/types';
 import { getUpcomingGames, getPastGames } from '@/lib/ddb/games';
 import { useState, useEffect } from 'react';
+import { useAuth } from "@/context/AuthContext";
 
 export default function GamesPage() {
   const [upcomingGames, setUpcomingGames] = useState<Game[]>([]);
   const [pastGames, setPastGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     async function fetchGames() {
@@ -54,13 +56,21 @@ export default function GamesPage() {
   return (
     <div className="container mx-auto py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-3">
           <h1 className="text-3xl font-bold dark:text-white">Games</h1>
-          <Link href="/games/create">
-            <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
-              Create New Game
-            </button>
-          </Link>
+          {isAdmin ? (
+            <Link href="/games/create">
+              <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
+                Create New Game
+              </button>
+            </Link>
+          ) : (
+            <div className="text-gray-600 dark:text-gray-400 text-sm">
+              Only admins can create new games. <a href="https://github.com/shitoshparajuli/ew-pickup/issues/new" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                Apply!
+              </a>
+            </div>
+          )}
         </div>
         
         <section className="mb-10">

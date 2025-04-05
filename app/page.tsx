@@ -8,7 +8,7 @@ import { getNextGame } from "@/lib/ddb/games";
 import { isUserParticipatingInGame } from "@/lib/ddb/game-participants";
 
 export default function HomePage() {
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, signIn, isAdmin, isMember } = useAuth();
   const isAuthenticated = !!user;
   const [nextGame, setNextGame] = useState<Record<string, any> | null>(null);
   const [loadingGame, setLoadingGame] = useState(false);
@@ -23,6 +23,8 @@ export default function HomePage() {
           const game = await getNextGame();
           setNextGame(game);
           console.log("user:", user);
+          console.log("isAdmin:", isAdmin);
+          console.log("isMember:", isMember);
           
           if (game && user) {
             setCheckingParticipation(true);
@@ -135,13 +137,18 @@ export default function HomePage() {
           ) : (
             <div className="space-y-4">
               <p className="mb-6 dark:text-gray-200">
-                No upcoming games scheduled.
+                {isAdmin ? 
+                  "No upcoming games scheduled." : 
+                  <>Only admins/volunteers can create new games. <a href="https://github.com/shitoshparajuli/ew-pickup/issues/new" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Apply to become one!</a></>
+                }
               </p>
-              <Link href="/games/create">
-                <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
-                  Create New Game
-                </button>
-              </Link>
+              {isAdmin && (
+                <Link href="/games/create">
+                  <button className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer">
+                    Create New Game
+                  </button>
+                </Link>
+              )}
             </div>
           )}
         </div>

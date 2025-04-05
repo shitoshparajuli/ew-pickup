@@ -12,6 +12,7 @@ export interface UserProfile {
   CreatedAt?: string;
   UpdatedAt?: string;
   IsMember?: boolean;
+  IsAdmin?: boolean;
 }
 
 export interface Game {

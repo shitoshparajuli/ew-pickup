@@ -34,7 +34,9 @@ export function getUserId(user: CognitoUser | null): string | null {
 
 // Get user profile
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  console.log("Getting user profile for userId:", userId);
   if (!userId) return null;
+  console.log("userId", userId);
   
   try {
     const command = new GetCommand({
@@ -189,6 +191,8 @@ export async function saveUserProfile(
         ...profileData,
         CreatedAt: profileData.CreatedAt || timestamp,
         UpdatedAt: timestamp,
+        IsAdmin: false,
+        IsMember: false,
       },
     });
     

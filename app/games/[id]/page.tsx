@@ -32,7 +32,7 @@ export default function GamePage({ params }: GamePageProps) {
   const unwrappedParams = use(params);
   const { id } = unwrappedParams;
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [game, setGame] = useState<Game | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -300,32 +300,34 @@ export default function GamePage({ params }: GamePageProps) {
           
           <div>
             
-            {/* Team Generation Section - always show regardless of participant count */}
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4 dark:text-white">Team Generation</h2>
-              
-              {/* Team Count Selector */}
-              <div className="mb-4 flex items-center gap-3">
-                <label htmlFor="teamCount" className="font-medium dark:text-white whitespace-nowrap">Number of Teams:</label>
-                <select
-                  id="teamCount"
-                  value={selectedTeamCount}
-                  onChange={(e) => setSelectedTeamCount(parseInt(e.target.value) as 2 | 4)}
-                  className="px-4 py-2 rounded-full border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-blue-500 focus:border-transparent cursor-pointer"
+            {/* Team Generation Section - only show to admins */}
+            {isAdmin && (
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold mb-4 dark:text-white">Team Generation</h2>
+                
+                {/* Team Count Selector */}
+                <div className="mb-4 flex items-center gap-3">
+                  <label htmlFor="teamCount" className="font-medium dark:text-white whitespace-nowrap">Number of Teams:</label>
+                  <select
+                    id="teamCount"
+                    value={selectedTeamCount}
+                    onChange={(e) => setSelectedTeamCount(parseInt(e.target.value) as 2 | 4)}
+                    className="px-4 py-2 rounded-full border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                  >
+                    <option value={2}>2 Teams</option>
+                    <option value={4}>4 Teams</option>
+                  </select>
+                </div>
+                
+                {/* Generate Teams Button */}
+                <button 
+                  onClick={generateTeams}
+                  className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
                 >
-                  <option value={2}>2 Teams</option>
-                  <option value={4}>4 Teams</option>
-                </select>
+                  {showTeams && teams.length > 0 ? 'Re-Shuffle Teams' : 'Generate Teams'}
+                </button>
               </div>
-              
-              {/* Generate Teams Button */}
-              <button 
-                onClick={generateTeams}
-                className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
-              >
-                {showTeams && teams.length > 0 ? 'Re-Shuffle Teams' : 'Generate Teams'}
-              </button>
-            </div>
+            )}
             
             {/* Teams Section - Using the division algorithm */}
             {showTeams && teams.length > 0 && (

@@ -3,7 +3,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Amplify } from 'aws-amplify';
 import { signInWithRedirect, signOut, getCurrentUser } from 'aws-amplify/auth';
-import { AuthContextType, CognitoUser } from '@/data/types';
+import { AuthContextType, CognitoUser, UserProfile } from '@/data/types';
+import { getUserProfile } from '@/lib/ddb/users';
 import outputs from "../amplify_outputs.json"
 
 Amplify.configure(outputs, { ssr: true });
@@ -16,6 +17,8 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<CognitoUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isMember, setIsMember] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -26,6 +29,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   async function checkUser(): Promise<void> {
     try {
       const currentUser = await getCurrentUser();
+
+      if (currentUser) {
+        const userProfile = await getUserProfile(currentUser.userId);
+        console.log("userProfile", userProfile);
+        setIsAdmin(userProfile?.IsAdmin || false);
+        setIsMember(userProfile?.IsMember || false);
+      }
       
       // User object is already in the format we need
       setUser(currentUser as unknown as CognitoUser);
@@ -58,7 +68,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return (
     <AuthContext.Provider value={{ 
-      user, 
+      user,
+      isAdmin,
+      isMember,
       loading, 
       signIn: handleSignIn, 
       signOut: handleSignOut 
