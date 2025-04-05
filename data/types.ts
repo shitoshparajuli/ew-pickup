@@ -48,6 +48,8 @@ export interface CognitoUser {
 export interface AuthContextType {
   user: CognitoUser | null;
   loading: boolean;
+  isAdmin: boolean;
+  isMember: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
 }
