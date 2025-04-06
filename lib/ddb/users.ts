@@ -43,6 +43,8 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       TableName,
       Key: { UserId: userId },
     });
+    
+    const response: GetCommandOutput = await docClient.send(command);
     return response.Item as UserProfile | null;
   } catch (error) {
     console.error("Error fetching user profile:", {
