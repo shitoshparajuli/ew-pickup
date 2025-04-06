@@ -93,7 +93,6 @@ export async function getGameById(id: string) {
     });
     
     const response = await docClient.send(command);
-    console.log('Response from DynamoDB:', response);
     
     if (!response.Item) {
       return null;
@@ -139,6 +138,12 @@ export async function getAllGames(): Promise<Game[]> {
     const gamesWithParticipants = await Promise.all(result.Items.map(async (item) => {
       const participants = await getGameParticipants(item.GameId);
       
+      // Calculate total guest count
+      const guestCount = participants.reduce((count, participant) => {
+        return count + (participant.GuestList && Array.isArray(participant.GuestList) 
+          ? participant.GuestList.length : 0);
+      }, 0);
+      
       return {
         id: item.GameId,
         date: item.Date,
@@ -146,7 +151,7 @@ export async function getAllGames(): Promise<Game[]> {
         time: item.StartTime,
         location: item.Location,
         status: item.Status,
-        playersCount: participants.length,
+        playersCount: participants.length + guestCount,
         isPaid: item.IsPaid || false,
         winner: item.Winner || undefined,
         loser: item.Loser || undefined
@@ -196,6 +201,12 @@ export async function getUpcomingGames(limit: number = 5): Promise<Game[]> {
     const gamesWithParticipants = await Promise.all(sortedItems.map(async (item) => {
       const participants = await getGameParticipants(item.GameId);
       
+      // Calculate total guest count
+      const guestCount = participants.reduce((count, participant) => {
+        return count + (participant.GuestList && Array.isArray(participant.GuestList) 
+          ? participant.GuestList.length : 0);
+      }, 0);
+      
       return {
         id: item.GameId,
         date: item.Date,
@@ -203,7 +214,7 @@ export async function getUpcomingGames(limit: number = 5): Promise<Game[]> {
         time: item.StartTime,
         location: item.Location,
         status: item.Status,
-        playersCount: participants.length,
+        playersCount: participants.length + guestCount,
         isPaid: item.IsPaid || false
       };
     }));
@@ -247,6 +258,12 @@ export async function getPastGames(limit: number = 5): Promise<Game[]> {
     const gamesWithParticipants = await Promise.all(sortedItems.map(async (item) => {
       const participants = await getGameParticipants(item.GameId);
       
+      // Calculate total guest count
+      const guestCount = participants.reduce((count, participant) => {
+        return count + (participant.GuestList && Array.isArray(participant.GuestList) 
+          ? participant.GuestList.length : 0);
+      }, 0);
+      
       return {
         id: item.GameId,
         date: item.Date,
@@ -254,7 +271,7 @@ export async function getPastGames(limit: number = 5): Promise<Game[]> {
         time: item.StartTime,
         location: item.Location,
         status: item.Status,
-        playersCount: participants.length,
+        playersCount: participants.length + guestCount,
         isPaid: item.IsPaid || false,
         winner: item.Winner || undefined,
         loser: item.Loser || undefined

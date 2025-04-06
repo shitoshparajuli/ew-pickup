@@ -411,11 +411,18 @@ export default function GamePage({ params }: GamePageProps) {
             <div className="overflow-x-auto mb-8">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {participants.length > 0 ? (
-                  participants.map((participant, index) => (
-                    <div key={`player-${participant.UserId}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">
-                      <span className="font-medium">{participant.FirstName} {participant.LastName}</span>
-                    </div>
-                  ))
+                  [...participants]
+                    .sort((a, b) => {
+                      // Sort by createdAt timestamp (most recent first)
+                      const dateA = a.CreatedAt ? new Date(a.CreatedAt).getTime() : 0;
+                      const dateB = b.CreatedAt ? new Date(b.CreatedAt).getTime() : 0;
+                      return dateA - dateB; // Ascending order (earliest first)
+                    })
+                    .map((participant, index) => (
+                      <div key={`player-${participant.UserId}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">
+                        <span className="font-medium">{participant.FirstName} {participant.LastName}</span>
+                      </div>
+                    ))
                 ) : (
                   <div className="col-span-full text-center py-4 dark:text-gray-300">
                     No players registered yet
@@ -432,6 +439,12 @@ export default function GamePage({ params }: GamePageProps) {
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {participants
                       .filter(p => p.GuestList && Array.isArray(p.GuestList) && p.GuestList.length > 0)
+                      .sort((a, b) => {
+                        // Sort by host's createdAt timestamp
+                        const dateA = a.CreatedAt ? new Date(a.CreatedAt).getTime() : 0;
+                        const dateB = b.CreatedAt ? new Date(b.CreatedAt).getTime() : 0;
+                        return dateA - dateB; // Ascending order (earliest first)
+                      })
                       .flatMap(participant => 
                         participant.GuestList.map((guest: Guest, guestIndex: number) => (
                           <div key={`guest-${participant.UserId}-${guestIndex}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">

@@ -34,7 +34,6 @@ export function getUserId(user: CognitoUser | null): string | null {
 
 // Get user profile
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  console.log("Getting user profile for userId:", userId);
   if (!userId) return null;
   console.log("userId", userId);
   
