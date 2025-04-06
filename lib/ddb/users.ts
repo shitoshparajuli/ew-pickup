@@ -43,14 +43,6 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       TableName,
       Key: { UserId: userId },
     });
-    
-    const response: GetCommandOutput = await docClient.send(command);
-    console.log("DynamoDB request:", {
-      TableName,
-      Key: { UserId: userId },
-      command: command
-    });
-    console.log("DynamoDB response:", response);
     return response.Item as UserProfile | null;
   } catch (error) {
     console.error("Error fetching user profile:", {

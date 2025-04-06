@@ -9,9 +9,23 @@ import { getGameById } from '@/lib/ddb/games';
 import { getGameParticipants, isUserParticipatingInGame, deleteGameParticipant } from '@/lib/ddb/game-participants';
 import { useAuth } from '@/context/AuthContext';
 import { divideTeams } from '@/lib/division-algorithm';
-import { Position, Player, Team } from '@/data/types';
+import { Position, Player } from '@/data/types';
 import { getBatchPlayers } from '@/lib/ddb/users';
-import { storeGameTeams, getGameTeams, gameTeamsToArray, SimplifiedPlayer, SimplifiedTeam } from '@/lib/ddb/game-teams';
+import { storeGameTeams, getGameTeams, gameTeamsToArray } from '@/lib/ddb/game-teams';
+
+// Define guest interface to fix TypeScript error
+interface Guest {
+  name: string;
+  rating?: number;
+}
+
+// Define skill level options with corresponding rating values
+const SKILL_LEVELS = [
+  { label: "Beginner", value: 5 },
+  { label: "Intermediate", value: 6 },
+  { label: "Experienced", value: 7 },
+  { label: "Advanced", value: 8 }
+];
 
 // Animation keyframes
 const fadeInAnimation = `
@@ -40,8 +54,9 @@ export default function GamePage({ params }: GamePageProps) {
   const [showTeams, setShowTeams] = useState(false);
   const [isParticipating, setIsParticipating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [teams, setTeams] = useState<Player[][]>([]);
   const [selectedTeamCount, setSelectedTeamCount] = useState<2 | 4>(2);
+  const [guestCount, setGuestCount] = useState<number>(0);
   
   useEffect(() => {
     async function loadGame() {
@@ -62,6 +77,13 @@ export default function GamePage({ params }: GamePageProps) {
         try {
           const participantsData = await getGameParticipants(id);
           setParticipants(participantsData);
+          
+          // Calculate total guest count
+          const totalGuests = participantsData.reduce((count, participant) => {
+            return count + (participant.GuestList && Array.isArray(participant.GuestList) 
+              ? participant.GuestList.length : 0);
+          }, 0);
+          setGuestCount(totalGuests);
           
           // Check if current user is participating
           if (user) {
@@ -145,14 +167,6 @@ export default function GamePage({ params }: GamePageProps) {
         }
       }
       
-      // Use actual participant data
-      console.log('Using actual participant data for team generation');
-      
-      if (participants.length < 2) {
-        alert('Not enough players to generate teams. Minimum 2 players required.');
-        return;
-      }
-      
       // Extract user IDs from participants
       const userIds = participants.map(participant => participant.UserId).filter(Boolean);
       
@@ -176,36 +190,51 @@ export default function GamePage({ params }: GamePageProps) {
         }
       });
       
-      // Use the selected team count from state
+      // Add guests to the players list
+      const guestPlayers: Player[] = [];
+      
+      participants.forEach(participant => {
+        if (participant.GuestList && Array.isArray(participant.GuestList) && participant.GuestList.length > 0) {
+          participant.GuestList.forEach((guest: Guest) => {
+            guestPlayers.push({
+              uuid: `guest-${participant.UserId}-${guest.name}`,
+              name: `${guest.name}`,
+              rating: guest.rating || 7, // Use provided rating or default to 7
+              position: ['Midfielder'], // Default position
+              isGuest: true,
+              hostName: `${participant.FirstName} ${participant.LastName}`
+            });
+          });
+        }
+      });
+      
+      // Combine registered players and guests
+      const allPlayers = [...players, ...guestPlayers];
+      
       // Only allow 4 teams if we have at least 8 players
-      const teamCount = players.length >= 8 ? selectedTeamCount : 2;
+      const teamCount = allPlayers.length >= 8 ? selectedTeamCount : 2;
       
-      console.log('Generating teams with', players.length, 'players into', teamCount, 'teams');
+      console.log('Generating teams with', allPlayers.length, 'players into', teamCount, 'teams');
       
-      const generatedTeams = divideTeams(players, teamCount as 2 | 4);
+      const generatedTeams = divideTeams(allPlayers, teamCount as 2 | 4);
       
-      setTeams(generatedTeams);
+      // Convert the team objects to arrays of players
+      const playerTeams: Player[][] = generatedTeams.map(team => team.players);
       
-      // Log team ELO values
-      console.log('Team ELO values:', generatedTeams.map((team, index) => ({
+      setTeams(playerTeams);
+      
+      // Log team ELOs
+      console.log('Team ELOs:', generatedTeams.map((team, index) => ({
         team: index + 1,
         elo: team.elo,
-        players: team.players.length
+        averageRating: team.elo / team.players.length
       })));
       
       setShowTeams(true);
       
-      // Store teams in the database with simplified player objects
+      // Store teams in the database directly
       try {
-        // Create a simplified version of teams with only name and UserId for each player
-        const simplifiedTeamsForStorage: SimplifiedTeam[] = generatedTeams.map(team => ({
-          players: team.players.map(player => ({
-            name: player.name,
-            UserId: player.uuid
-          }))
-        }));
-        
-        const result = await storeGameTeams(id, simplifiedTeamsForStorage);
+        const result = await storeGameTeams(id, playerTeams);
         if (result.success) {
           console.log('Teams stored successfully in database');
         }
@@ -279,7 +308,7 @@ export default function GamePage({ params }: GamePageProps) {
               <ul className="space-y-2 dark:text-gray-200">
                 <li><span className="font-medium">Location:</span> {location}</li>
                 <li><span className="font-medium">Status:</span> {status === 'UPCOMING' ? 'Upcoming' : 'Completed'}</li>
-                <li><span className="font-medium">Players:</span> {participants.length}</li>
+                <li><span className="font-medium">Players:</span> {participants.length + guestCount}</li>
               </ul>
             </div>
           </div>
@@ -293,7 +322,7 @@ export default function GamePage({ params }: GamePageProps) {
               >
                 {isLoading 
                   ? (isParticipating ? 'Bailing out...' : 'Joining...') 
-                  : (isParticipating ? 'Cowardly bail out' : 'Join This Game')}
+                  : (isParticipating ? 'Bail out' : 'Join This Game')}
               </button>
             </div>
           )}
@@ -334,12 +363,12 @@ export default function GamePage({ params }: GamePageProps) {
               <div className="animate-fade-in">
                 <h2 className="text-xl font-semibold mb-4 dark:text-white">Teams</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {teams.map((team, teamIndex) => {
+                  {teams.map((teamPlayers, teamIndex) => {
                     // Color map for teams
                     const teamColors = [
                       { name: 'Red Team', bgClass: 'bg-red-50 dark:bg-red-900/20', textClass: 'text-red-600 dark:text-red-400' },
-                      { name: 'Green Team', bgClass: 'bg-green-50 dark:bg-green-900/20', textClass: 'text-green-600 dark:text-green-400' },
                       { name: 'Blue Team', bgClass: 'bg-blue-50 dark:bg-blue-900/20', textClass: 'text-blue-600 dark:text-blue-400' },
+                      { name: 'Green Team', bgClass: 'bg-green-50 dark:bg-green-900/20', textClass: 'text-green-600 dark:text-green-400' },
                       { name: 'Black Team', bgClass: 'bg-gray-50 dark:bg-gray-900/20', textClass: 'text-gray-800 dark:text-gray-300' }
                     ];
                     
@@ -350,12 +379,18 @@ export default function GamePage({ params }: GamePageProps) {
                         <h3 className={`text-lg font-medium mb-2 ${color.textClass}`}>{color.name}</h3>
                         <div className={`${color.bgClass} rounded-lg p-4`}>
                           <div className="grid grid-cols-1 gap-2">
-                            {team.players.map((player, playerIndex) => (
+                          
+                            {teamPlayers.map((player, playerIndex) => (
                               <div 
                                 key={`${teamIndex}-${playerIndex}`} 
                                 className="bg-white dark:bg-gray-800 rounded-md p-2 shadow-sm text-center dark:text-gray-200"
                               >
                                 {player.name}
+                                {player.isGuest && (
+                                  <span className="block text-xs text-gray-500 dark:text-gray-400">
+                                    Guest of {player.hostName}
+                                  </span>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -370,7 +405,7 @@ export default function GamePage({ params }: GamePageProps) {
             {/* Add gap/spacing here */}
             <div className="mb-12"></div>
 
-            <h2 className="text-xl font-semibold mb-4 dark:text-white">Players ({participants.length})</h2>
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">Players ({participants.length + guestCount})</h2>
             
             {/* Player List */}
             <div className="overflow-x-auto mb-8">
@@ -379,9 +414,6 @@ export default function GamePage({ params }: GamePageProps) {
                   participants.map((participant, index) => (
                     <div key={`player-${participant.UserId}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">
                       <span className="font-medium">{participant.FirstName} {participant.LastName}</span>
-                      {participant.GuestList && participant.GuestList.length > 0 && (
-                        <span className="block text-sm text-gray-500 dark:text-gray-400">+{participant.GuestList.split(',').length} guests</span>
-                      )}
                     </div>
                   ))
                 ) : (
@@ -391,6 +423,30 @@ export default function GamePage({ params }: GamePageProps) {
                 )}
               </div>
             </div>
+
+            {/* Guest List Section */}
+            {participants.some(p => p.GuestList && Array.isArray(p.GuestList) && p.GuestList.length > 0) && (
+              <>
+                <h2 className="text-xl font-semibold mb-4 dark:text-white">Guests</h2>
+                <div className="overflow-x-auto mb-8">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {participants
+                      .filter(p => p.GuestList && Array.isArray(p.GuestList) && p.GuestList.length > 0)
+                      .flatMap(participant => 
+                        participant.GuestList.map((guest: Guest, guestIndex: number) => (
+                          <div key={`guest-${participant.UserId}-${guestIndex}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">
+                            <span className="font-medium">{guest.name}</span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-400">
+                              Guest of {participant.FirstName} {participant.LastName}
+                            </span>
+                          </div>
+                        ))
+                      )
+                    }
+                  </div>
+                </div>
+              </>
+            )}
 
           </div>
         </div>

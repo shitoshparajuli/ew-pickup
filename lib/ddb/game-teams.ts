@@ -17,6 +17,14 @@ export interface SimplifiedTeam {
   players: SimplifiedPlayer[];
 }
 
+// Define minimal player data for DynamoDB storage
+export interface MinimalPlayerData {
+  name: string;
+  uuid?: string;      // Only for registered players
+  isGuest?: boolean;  // Only for guests
+  hostName?: string;  // Only for guests
+}
+
 const client = new DynamoDBClient({
   region: process.env.NEXT_PUBLIC_AWS_REGION,
   credentials: {
@@ -30,23 +38,47 @@ const TableName = "Game-Teams";
 
 interface GameTeams {
   GameId: string;
-  Team1?: any;
-  Team2?: any;
-  Team3?: any;
-  Team4?: any;
+  Team1?: MinimalPlayerData[];
+  Team2?: MinimalPlayerData[];
+  Team3?: MinimalPlayerData[];
+  Team4?: MinimalPlayerData[];
   CreatedAt: string;
   UpdatedAt: string;
 }
 
 /**
+ * Converts a Player object to minimal data for DynamoDB storage
+ * @param player - Full Player object
+ * @returns MinimalPlayerData with only essential fields
+ */
+function playerToMinimalData(player: Player): MinimalPlayerData {
+  const minimalData: MinimalPlayerData = {
+    name: player.name
+  };
+  
+  // For guests, include isGuest and hostName
+  if (player.isGuest) {
+    minimalData.isGuest = true;
+    if (player.hostName) {
+      minimalData.hostName = player.hostName;
+    }
+  } else {
+    // For registered players, include uuid
+    minimalData.uuid = player.uuid;
+  }
+  
+  return minimalData;
+}
+
+/**
  * Stores teams for a game
  * @param gameId - ID of the game
- * @param teams - Array of teams to store (up to 4) - can be full Team objects or simplified teams
+ * @param teams - Array of teams to store (up to 4) - arrays of Player objects
  * @returns Success status
  */
 export async function storeGameTeams(
   gameId: string,
-  teams: Team[] | SimplifiedTeam[]
+  teams: Player[][]
 ): Promise<{ success: boolean }> {
   if (!gameId) throw new Error("Game ID is required");
   if (!teams || !teams.length) throw new Error("At least one team is required");
@@ -56,11 +88,12 @@ export async function storeGameTeams(
     const timestamp = new Date().toISOString();
     
     // Create an object with the teams based on the number provided
-    const teamsObject: Partial<GameTeams> = {};
+    // Convert full Player objects to minimal data for storage
+    const teamsObject: Record<string, MinimalPlayerData[]> = {};
     
     teams.forEach((team, index) => {
-      const teamKey = `Team${index + 1}` as keyof GameTeams;
-      teamsObject[teamKey] = team;
+      const teamKey = `Team${index + 1}`;
+      teamsObject[teamKey] = team.map(player => playerToMinimalData(player));
     });
     
     const command = new PutCommand({
@@ -114,7 +147,7 @@ export async function getGameTeams(gameId: string): Promise<GameTeams | null> {
  */
 export async function updateGameTeams(
   gameId: string,
-  teams: Team[] | SimplifiedTeam[]
+  teams: Player[][]
 ): Promise<{ success: boolean }> {
   return storeGameTeams(gameId, teams);
 }
@@ -122,36 +155,34 @@ export async function updateGameTeams(
 /**
  * Converts game teams data to an array of teams
  * @param gameTeams - GameTeams object
- * @returns Array of Team objects
+ * @returns Array of arrays of Player objects
  */
-export function gameTeamsToArray(gameTeams: GameTeams): Team[] {
+export function gameTeamsToArray(gameTeams: GameTeams): Player[][] {
   if (!gameTeams) return [];
   
-  const result: Team[] = [];
+  const result: Player[][] = [];
   
-  if (gameTeams.Team1) result.push(convertToTeam(gameTeams.Team1));
-  if (gameTeams.Team2) result.push(convertToTeam(gameTeams.Team2));
-  if (gameTeams.Team3) result.push(convertToTeam(gameTeams.Team3));
-  if (gameTeams.Team4) result.push(convertToTeam(gameTeams.Team4));
+  if (gameTeams.Team1) result.push(gameTeams.Team1.map(p => ensurePlayerFormat(p)));
+  if (gameTeams.Team2) result.push(gameTeams.Team2.map(p => ensurePlayerFormat(p)));
+  if (gameTeams.Team3) result.push(gameTeams.Team3.map(p => ensurePlayerFormat(p)));
+  if (gameTeams.Team4) result.push(gameTeams.Team4.map(p => ensurePlayerFormat(p)));
   
   return result;
 }
 
 /**
- * Converts a simplified team from DynamoDB to a proper Team object
- * @param teamData - Team data from DynamoDB that may be simplified
- * @returns A properly formatted Team object with all required Player properties
+ * Ensures a player from DynamoDB has the proper Player format
+ * @param playerData - Player data from DynamoDB that may be in simplified format
+ * @returns A properly formatted Player object with all required properties
  */
-function convertToTeam(teamData: any): Team {
+function ensurePlayerFormat(playerData: any): Player {
+  // Create a properly formatted Player object from minimal data
   return {
-    players: teamData.players.map((player: any) => {
-      return {
-        name: player.name,
-        uuid: player.UserId,
-        rating: 7, // Default rating
-        position: ['Midfielder'] // Default position
-      };
-    }),
-    elo: 0 // Initialize with 0, will be calculated when teams are loaded
+    name: playerData.name,
+    uuid: playerData.uuid || (playerData.UserId || `guest-${Math.random().toString(36).substring(2, 9)}`),
+    rating: 7, // Default rating
+    position: ['Midfielder'], // Default position
+    isGuest: !!playerData.isGuest,
+    hostName: playerData.hostName
   };
 }

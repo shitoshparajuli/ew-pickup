@@ -86,6 +86,8 @@ export interface Player {
   name: string;
   rating: number;
   position: Position[];
+  isGuest?: boolean;
+  hostName?: string;
 }
 
 export interface Team {

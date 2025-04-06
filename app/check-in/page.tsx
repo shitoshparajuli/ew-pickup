@@ -6,6 +6,14 @@ import { getUserProfile } from '@/lib/ddb/users';
 import { createGameParticipant } from '@/lib/ddb/game-participants';
 import { useAuth } from '@/context/AuthContext';
 
+// Define skill level options with corresponding rating values
+const SKILL_LEVELS = [
+  { label: "Beginner", value: 5 },
+  { label: "Intermediate", value: 6 },
+  { label: "Experienced", value: 7 },
+  { label: "Advanced", value: 8 }
+];
+
 // Create a client component that uses the hooks
 function CheckInContent() {
   const router = useRouter();
@@ -15,7 +23,7 @@ function CheckInContent() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [guests, setGuests] = useState(0);
-  const [guestsList, setGuestsList] = useState<Array<{name: string}>>([]);
+  const [guestsList, setGuestsList] = useState<Array<{name: string, rating: number}>>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -60,9 +68,12 @@ function CheckInContent() {
     }
   }, [gameId, loading, authLoading]);
 
-  const handleGuestChange = (index: number, value: string) => {
+  const handleGuestChange = (index: number, field: 'name' | 'rating', value: string | number) => {
     const updatedGuests = [...guestsList];
-    updatedGuests[index] = { ...updatedGuests[index], name: value };
+    updatedGuests[index] = { 
+      ...updatedGuests[index], 
+      [field]: value 
+    };
     setGuestsList(updatedGuests);
   };
 
@@ -72,10 +83,10 @@ function CheckInContent() {
     
     // Adjust the guestsList array based on new count
     if (count > guestsList.length) {
-      // Add new empty guest entries
+      // Add new empty guest entries with default rating of 6 (Intermediate)
       const newGuests = [...guestsList];
       for (let i = guestsList.length; i < count; i++) {
-        newGuests.push({ name: '' });
+        newGuests.push({ name: '', rating: 6 });
       }
       setGuestsList(newGuests);
     } else if (count < guestsList.length) {
@@ -101,8 +112,8 @@ function CheckInContent() {
       setSubmitting(true);
       setError('');
       
-      // Format guest names as a comma-separated string
-      const guestListString = guestsList.map(guest => guest.name.trim()).filter(name => name).join(', ');
+      // Filter out entries with empty names
+      const guestList = guestsList.filter(guest => guest.name.trim());
       
       // Save the participant data
       await createGameParticipant({
@@ -110,7 +121,7 @@ function CheckInContent() {
         userId: user.userId,
         firstName,
         lastName,
-        guestList: guestListString
+        guestList
       });
       
       // Redirect to the game page
@@ -206,7 +217,7 @@ function CheckInContent() {
                 {guestsList.map((guest, index) => (
                   <div key={index} className="mb-4 p-3 border border-gray-200 dark:border-gray-700 rounded-md">
                     <h4 className="text-sm font-medium mb-2">Guest {index + 1}</h4>
-                    <div>
+                    <div className="mb-2">
                       <label 
                         htmlFor={`guest-${index}-name`} 
                         className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
@@ -217,10 +228,30 @@ function CheckInContent() {
                         type="text"
                         id={`guest-${index}-name`}
                         value={guest.name}
-                        onChange={(e) => handleGuestChange(index, e.target.value)}
+                        onChange={(e) => handleGuestChange(index, 'name', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                         required
                       />
+                    </div>
+                    <div>
+                      <label 
+                        htmlFor={`guest-${index}-skill`} 
+                        className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                      >
+                        Skill Level
+                      </label>
+                      <select
+                        id={`guest-${index}-skill`}
+                        value={guest.rating}
+                        onChange={(e) => handleGuestChange(index, 'rating', parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      >
+                        {SKILL_LEVELS.map(level => (
+                          <option key={level.value} value={level.value}>
+                            {level.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 ))}

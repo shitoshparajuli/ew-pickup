@@ -11,12 +11,17 @@ const client = new DynamoDBClient({
 
 const docClient = DynamoDBDocumentClient.from(client);
 
+interface GuestInfo {
+  name: string;
+  rating: number;
+}
+
 interface CreateGameParticipantParams {
   gameId: string;
   userId: string;
   firstName: string;
   lastName: string;
-  guestList?: string;
+  guestList?: GuestInfo[];
 }
 
 export async function createGameParticipant({ 
@@ -36,7 +41,7 @@ export async function createGameParticipant({
         UserId: userId,
         FirstName: firstName,
         LastName: lastName,
-        GuestList: guestList || "",
+        GuestList: guestList || [],
         CreatedAt: timestamp,
         UpdatedAt: timestamp,
       },
