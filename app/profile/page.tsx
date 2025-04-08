@@ -62,7 +62,7 @@ export default function ProfilePage() {
           <h1 className="text-3xl font-bold dark:text-white">Player Profile</h1>
           <Link 
             href="/profile/edit"
-            className="bg-black border border-black text-white hover:bg-gray-800 px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
+            className="bg-transparent border border-white text-white hover:bg-white hover:text-black px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
           >
             Edit Profile
           </Link>
