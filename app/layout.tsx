@@ -8,10 +8,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "Everest Warriors",
-  description: "Sign up for pickup games",
-  icons: {
-    icon: "/images/logo-ew.png",
-  },
+  description: "Sign up for pickup games"
 };
 
 interface RootLayoutProps {
