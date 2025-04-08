@@ -5,10 +5,12 @@ import {
   PutCommand, 
   UpdateCommand,
   BatchGetCommand,
+  ScanCommand,
   GetCommandOutput,
   PutCommandOutput,
   UpdateCommandOutput,
-  BatchGetCommandOutput
+  BatchGetCommandOutput,
+  ScanCommandOutput
 } from "@aws-sdk/lib-dynamodb";
 import { CognitoUser, UserProfile, Player, Position } from "@/data/types";
 
@@ -208,7 +210,7 @@ export async function updateUserProfile(
     // Add updatedAt timestamp
     const dataToUpdate = {
       ...updateData,
-      updatedAt: new Date().toISOString(),
+      UpdatedAt: new Date().toISOString(),
     };
     
     // Build update expression and expression attribute values
@@ -246,5 +248,32 @@ export async function updateUserProfile(
   } catch (error) {
     console.error("Error updating user profile:", error);
     throw error;
+  }
+}
+
+// Get all members (users with IsMember = true)
+export async function getAllMembers(): Promise<UserProfile[]> {
+  try {
+    const command = new ScanCommand({
+      TableName,
+      FilterExpression: "IsMember = :isMember",
+      ExpressionAttributeValues: {
+        ":isMember": true
+      }
+    });
+
+    const response: ScanCommandOutput = await docClient.send(command);
+    return response.Items as UserProfile[] || [];
+  } catch (error) {
+    console.error("Error scanning for members:", {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      request: {
+        TableName,
+        FilterExpression: "IsMember = :isMember"
+      }
+    });
+    return [];
   }
 }

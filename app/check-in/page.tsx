@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getUserProfile } from '@/lib/ddb/users';
+import { getUserProfile, updateUserProfile } from '@/lib/ddb/users';
 import { createGameParticipant } from '@/lib/ddb/game-participants';
 import { useAuth } from '@/context/AuthContext';
 
@@ -32,7 +32,6 @@ function CheckInContent() {
     async function fetchUserProfile() {
       try {
         // Use AuthContext to check authentication
-        console.log("User: " + user)
         if (user) {
           const userId = user.userId;
           
@@ -123,6 +122,22 @@ function CheckInContent() {
         lastName,
         guestList
       });
+      
+      // Update the user's PaymentDue field if there are guests
+      if (guestList.length > 0) {
+        // Get the current user profile
+        const userProfile = await getUserProfile(user.userId);
+        
+        // Calculate the payment due amount
+        const currentPaymentDue = userProfile?.PaymentDue || 0;
+        const additionalPayment = guestList.length * 15; // $15 per guest
+        const newPaymentDue = currentPaymentDue + additionalPayment;
+        
+        // Update the user profile with the new PaymentDue amount
+        await updateUserProfile(user.userId, {
+          PaymentDue: newPaymentDue
+        });
+      }
       
       // Redirect to the game page
       router.push(`/games/${gameId}`);

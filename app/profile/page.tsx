@@ -84,6 +84,15 @@ export default function ProfilePage() {
               ))}
             </div>
           </div>
+
+          {profile?.PaymentDue !== undefined && profile.PaymentDue > 0 && (
+            <div className="mb-6">
+              <h2 className="text-gray-600 dark:text-gray-400 text-sm mb-2">Payment Due</h2>
+              <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                ${profile.PaymentDue.toFixed(2)}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

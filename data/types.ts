@@ -13,6 +13,7 @@ export interface UserProfile {
   UpdatedAt?: string;
   IsMember?: boolean;
   IsAdmin?: boolean;
+  PaymentDue?: number;
 }
 
 export interface Game {

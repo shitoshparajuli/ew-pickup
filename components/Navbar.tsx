@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { NavLinkProps } from "@/data/types";
 import { useState } from "react";
-import { Menu, X, Home, Volleyball, User } from "lucide-react";
+import { Menu, X, Home, Volleyball, User, Users } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -42,6 +42,13 @@ export default function Navbar() {
             <div className="flex items-center">
               <Volleyball size={18} className="mr-2" />
               <span className="text-sm">Games</span>
+            </div>
+          </NavLink>
+          
+          <NavLink href="/members" active={pathname === "/members"} aria-label="Members">
+            <div className="flex items-center">
+              <Users size={18} className="mr-2" />
+              <span className="text-sm">Members</span>
             </div>
           </NavLink>
           
@@ -110,6 +117,13 @@ export default function Navbar() {
               <div className="flex items-center">
                 <Volleyball size={20} className="mr-3" />
                 <span>Games</span>
+              </div>
+            </NavLink>
+            
+            <NavLink href="/members" active={pathname === "/members"} onClick={toggleMenu}>
+              <div className="flex items-center">
+                <Users size={20} className="mr-3" />
+                <span>Members</span>
               </div>
             </NavLink>
             
