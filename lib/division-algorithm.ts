@@ -15,271 +15,358 @@ export function divideTeams(players: Player[], numTeams: 2 | 4, randomSeed = Mat
     throw new Error(`Cannot create ${numTeams} teams with only ${players.length} players`);
   }
 
-  // Sort players by rating with some randomization
-  // Add a small random factor (up to 0.5 rating points) to create different distributions
+  // Initialize teams with empty players array and 0 elo
+  const teams: Team[] = Array.from({ length: numTeams }, () => ({ players: [], elo: 0 }));
+
+  // Sort players by rating (highest to lowest)
+  // Add a small random factor (up to 0.5 rating points) to avoid identical distributions
   const sortedPlayers = [...players].sort((a, b) => {
     const randomFactorA = (Math.random() * randomSeed) % 0.5;
     const randomFactorB = (Math.random() * randomSeed) % 0.5;
     return (b.rating + randomFactorB) - (a.rating + randomFactorA);
   });
 
-  // Initialize teams with empty players array and 0 elo
-  const teams: Team[] = Array.from({ length: numTeams }, () => ({ players: [], elo: 0 }));
-
-  // Calculate players per team
-  const playersPerTeam = Math.floor(players.length / numTeams);
+  // Calculate players per team for even distribution
+  const basePlayersPerTeam = Math.floor(players.length / numTeams);
   const extraPlayers = players.length % numTeams;
-
-  // Set target sizes for each team
-  const teamSizes: number[] = Array(numTeams).fill(playersPerTeam);
-  for (let i = 0; i < extraPlayers; i++) {
-    teamSizes[i]++;
+  
+  // For even distribution, we'll set aside the bottom-rated players
+  // if we can't evenly distribute them
+  let playersToDistribute = [...sortedPlayers];
+  let extraPlayersList: Player[] = [];
+  
+  if (extraPlayers > 0) {
+    // Take the lowest-rated players out of the initial distribution
+    extraPlayersList = playersToDistribute.splice(playersToDistribute.length - extraPlayers, extraPlayers);
   }
 
-  // First, distribute players by position to ensure position balance
-  distributePlayersByPosition(sortedPlayers, teams, teamSizes);
+  // Step 1: Perform simple snake draft based on ratings with equal team sizes
+  snakeDraft(playersToDistribute, teams);
+
+  // Step 2: Balance positions if needed
+  balancePositions(teams);
   
-  // Optimize team composition
-  optimizeTeams(teams, teamSizes);
+  // Step 3: Add the extra players to teams with lowest ELO
+  if (extraPlayersList.length > 0) {
+    distributeExtraPlayers(extraPlayersList, teams);
+  }
 
   // Calculate final ELO for each team
   teams.forEach(team => {
     team.elo = team.players.reduce((sum, player) => sum + player.rating, 0);
+    
+    // Sort players by position
+    team.players.sort((a, b) => {
+      const posA = getPrimaryPosition(a);
+      const posB = getPrimaryPosition(b);
+      // Order: Defender, Midfielder, Attacker
+      const posOrder: Record<Position, number> = {
+        'Defender': 1,
+        'Midfielder': 2,
+        'Attacker': 3
+      };
+      return posOrder[posA] - posOrder[posB];
+    });
   });
 
   return teams;
 }
 
 /**
- * Distributes players to teams based on positions
+ * Performs a snake draft to distribute players across teams
  */
-function distributePlayersByPosition(
-  sortedPlayers: Player[],
-  teams: Team[],
-  teamSizes: number[]
-): void {
-  // Group players by their primary position preference
-  const playersByPosition: Record<Position, Player[]> = {
-    Attacker: [],
-    Midfielder: [],
-    Defender: []
-  };
-  
-  // Players without position preference
-  const unspecifiedPlayers: Player[] = [];
-  
-  // Categorize players
-  sortedPlayers.forEach(player => {
-    if (player.position && player.position.length > 0) {
-      playersByPosition[player.position[0]].push(player);
-    } else {
-      unspecifiedPlayers.push(player);
-    }
-  });
-  
-  // Shuffle players within each position group to add randomness
-  // but maintain the general skill ordering
-  shufflePlayersWithinRatingGroups(playersByPosition.Attacker);
-  shufflePlayersWithinRatingGroups(playersByPosition.Midfielder);
-  shufflePlayersWithinRatingGroups(playersByPosition.Defender);
-  shufflePlayersWithinRatingGroups(unspecifiedPlayers);
-  
-  // Calculate how many players of each position we need per team
-  const positionDistribution: Record<Position, number[]> = {
-    Attacker: Array(teams.length).fill(0),
-    Midfielder: Array(teams.length).fill(0),
-    Defender: Array(teams.length).fill(0)
-  };
-  
-  // Calculate ideal distribution of positions
-  const positions: Position[] = ['Attacker', 'Midfielder', 'Defender'];
-  positions.forEach(pos => {
-    const totalPlayers = playersByPosition[pos].length;
-    const playersPerTeam = Math.floor(totalPlayers / teams.length);
-    const extra = totalPlayers % teams.length;
-    
-    for (let i = 0; i < teams.length; i++) {
-      positionDistribution[pos][i] = playersPerTeam + (i < extra ? 1 : 0);
-    }
-  });
-  
-  // Distribute players by position using snake draft within each position
-  positions.forEach(pos => {
-    let direction = 1;
-    let teamIndex = 0;
-    
-    while (playersByPosition[pos].length > 0) {
-      // Find next team that needs this position
-      let teamsChecked = 0;
-      let foundTeam = false;
-      
-      while (teamsChecked < teams.length) {
-        if (
-          getPositionCount(teams[teamIndex].players, pos) < positionDistribution[pos][teamIndex] && 
-          teams[teamIndex].players.length < teamSizes[teamIndex]
-        ) {
-          foundTeam = true;
-          break;
-        }
-        
-        teamIndex = (teamIndex + direction + teams.length) % teams.length;
-        teamsChecked++;
-        
-        // Reverse direction at the ends
-        if (teamIndex === 0 || teamIndex === teams.length - 1) {
-          direction *= -1;
-        }
-      }
-      
-      // If we've checked all teams and found none that need this position, break
-      if (!foundTeam) break;
-      
-      // Add player to team
-      teams[teamIndex].players.push(playersByPosition[pos].shift()!);
-      
-      // Move to next team
-      teamIndex = (teamIndex + direction + teams.length) % teams.length;
-      
-      // Reverse direction at the ends
-      if (teamIndex === 0 || teamIndex === teams.length - 1) {
-        direction *= -1;
-      }
-    }
-  });
-  
-  // Distribute remaining position-specific players
-  const remainingPositionPlayers: Player[] = [
-    ...playersByPosition.Attacker, 
-    ...playersByPosition.Midfielder, 
-    ...playersByPosition.Defender
-  ].sort((a, b) => b.rating - a.rating);
-  
-  distributeRemainingPlayers(remainingPositionPlayers, teams, teamSizes);
-  
-  // Finally, distribute players without position preferences
-  distributeRemainingPlayers(unspecifiedPlayers, teams, teamSizes);
-}
-
-/**
- * Shuffles an array in-place using Fisher-Yates algorithm
- */
-function shuffleArray<T>(array: T[]): void {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-}
-
-/**
- * Shuffles players within similar rating groups
- * This maintains general skill ordering while adding randomness
- */
-function shufflePlayersWithinRatingGroups(players: Player[]): void {
-  if (players.length <= 3) {
-    shuffleArray(players);
-    return;
-  }
-  
-  // Sort by rating first
-  players.sort((a, b) => b.rating - a.rating);
-  
-  // Divide players into groups (top third, middle third, bottom third)
-  const groupSize = Math.ceil(players.length / 3);
-  
-  // Shuffle within each group
-  for (let i = 0; i < 3; i++) {
-    const start = i * groupSize;
-    const end = Math.min(start + groupSize, players.length);
-    
-    if (start >= end) continue;
-    
-    // Get the group
-    const group = players.slice(start, end);
-    shuffleArray(group);
-    
-    // Put it back
-    for (let j = 0; j < group.length; j++) {
-      players[start + j] = group[j];
-    }
-  }
-}
-
-/**
- * Gets the count of players with a specific primary position preference
- */
-function getPositionCount(players: Player[], position: Position): number {
-  return players.filter(player => 
-    player.position && player.position.length > 0 && player.position[0] === position
-  ).length;
-}
-
-/**
- * Distributes remaining players to balance team sizes
- */
-function distributeRemainingPlayers(
-  players: Player[],
-  teams: Team[],
-  teamSizes: number[]
-): void {
-  // Shuffle the order of players slightly to introduce randomness
-  for (let i = players.length - 1; i > 0; i--) {
-    // Use Fisher-Yates shuffle algorithm with constraints to maintain some skill ordering
-    // Only swap with nearby players (within 25% of the array) to maintain rough skill groupings
-    const range = Math.max(3, Math.floor(i * 0.25));
-    const j = Math.floor(Math.random() * range) + Math.max(0, i - range);
-    [players[i], players[j]] = [players[j], players[i]];
-  }
-  
-  // Use snake draft pattern for remaining players
-  let direction = 1;
+function snakeDraft(players: Player[], teams: Team[]): void {
+  let direction = 1; // 1 for forward, -1 for backward
   let teamIndex = 0;
-  
+
+  // Distribute players using snake draft
   while (players.length > 0) {
-    // Find next team that needs players
-    let teamsChecked = 0;
-    let foundTeam = false;
+    // Add player to current team
+    teams[teamIndex].players.push(players.shift()!);
     
-    while (teamsChecked < teams.length) {
-      if (teams[teamIndex].players.length < teamSizes[teamIndex]) {
-        foundTeam = true;
-        break;
-      }
-      
-      teamIndex = (teamIndex + direction + teams.length) % teams.length;
-      teamsChecked++;
-      
-      // Reverse direction at the ends
-      if (teamIndex === 0 || teamIndex === teams.length - 1) {
-        direction *= -1;
-      }
-    }
-    
-    // If we've checked all teams and found none that need players, break
-    if (!foundTeam) break;
-    
-    // Find best player for this team
-    const teamStats = calculateTeamStats(teams[teamIndex]);
-    let bestPlayerIndex = 0;
-    let bestScore = -1;
-    
-    for (let i = 0; i < players.length; i++) {
-      const score = calculatePlayerFitScore(players[i], teams[teamIndex], teamStats);
-      if (score > bestScore) {
-        bestScore = score;
-        bestPlayerIndex = i;
-      }
-    }
-    
-    teams[teamIndex].players.push(players.splice(bestPlayerIndex, 1)[0]);
-    
-    // Move to next team
-    teamIndex = (teamIndex + direction + teams.length) % teams.length;
+    // Move to next team using snake pattern
+    teamIndex += direction;
     
     // Reverse direction at the ends
-    if (teamIndex === 0 || teamIndex === teams.length - 1) {
-      direction *= -1;
+    if (teamIndex === teams.length) {
+      teamIndex = teams.length - 1;
+      direction = -1;
+    } else if (teamIndex < 0) {
+      teamIndex = 0;
+      direction = 1;
     }
   }
+}
+
+/**
+ * Distributes extra players to teams with the lowest ELO
+ */
+function distributeExtraPlayers(extraPlayers: Player[], teams: Team[]): void {
+  // Calculate current ELO for each team
+  const teamElos = teams.map(team => 
+    team.players.reduce((sum, player) => sum + player.rating, 0)
+  );
+  
+  // Create team indices sorted by ELO (lowest first)
+  const teamIndicesByElo = Array.from(
+    { length: teams.length }, 
+    (_, i) => i
+  ).sort((a, b) => teamElos[a] - teamElos[b]);
+  
+  // Distribute extra players to teams with lowest ELO
+  for (let i = 0; i < extraPlayers.length; i++) {
+    const teamIndex = teamIndicesByElo[i % teamIndicesByElo.length];
+    teams[teamIndex].players.push(extraPlayers[i]);
+    
+    // Update the ELO for this team
+    teamElos[teamIndex] += extraPlayers[i].rating;
+    
+    // Re-sort team indices if we need to loop around
+    if ((i + 1) % teamIndicesByElo.length === 0 && i + 1 < extraPlayers.length) {
+      teamIndicesByElo.sort((a, b) => teamElos[a] - teamElos[b]);
+    }
+  }
+}
+
+/**
+ * Balances positions across teams through player swaps
+ */
+function balancePositions(teams: Team[]): void {
+  const MAX_SWAPS = 20; // Increased limit for more balancing opportunities
+  
+  // Get initial position balance across teams
+  const initialStats = teams.map(calculateTeamStats);
+  
+  // First pass: Balance ELO ratings across teams
+  balanceTeamElos(teams);
+  
+  // Second pass: Balance positions while maintaining ELO balance
+  for (let swapAttempt = 0; swapAttempt < MAX_SWAPS; swapAttempt++) {
+    let bestSwap: {
+      teamAIndex: number,
+      teamBIndex: number,
+      playerAIndex: number,
+      playerBIndex: number,
+      improvement: number
+    } | null = null;
+    
+    // Try swaps between each pair of teams
+    for (let i = 0; i < teams.length; i++) {
+      for (let j = i + 1; j < teams.length; j++) {
+        const possibleSwap = findBestPositionSwap(teams[i], teams[j], i, j);
+        
+        if (possibleSwap && (!bestSwap || possibleSwap.improvement > bestSwap.improvement)) {
+          bestSwap = possibleSwap;
+        }
+      }
+    }
+    
+    // If no good swap was found, we're done
+    if (!bestSwap || bestSwap.improvement <= 0) {
+      break;
+    }
+    
+    // Execute the best swap
+    const { teamAIndex, teamBIndex, playerAIndex, playerBIndex } = bestSwap;
+    const playerA = teams[teamAIndex].players[playerAIndex];
+    const playerB = teams[teamBIndex].players[playerBIndex];
+    
+    teams[teamAIndex].players[playerAIndex] = playerB;
+    teams[teamBIndex].players[playerBIndex] = playerA;
+  }
+}
+
+/**
+ * Balances ELO ratings across teams without changing team sizes
+ */
+function balanceTeamElos(teams: Team[]): void {
+  const MAX_ELO_ITERATIONS = 10;
+  
+  for (let iteration = 0; iteration < MAX_ELO_ITERATIONS; iteration++) {
+    let improved = false;
+    
+    // Calculate current team ELOs
+    const teamElos = teams.map(team => 
+      team.players.reduce((sum, player) => sum + player.rating, 0)
+    );
+    
+    // Calculate average team ELO
+    const avgElo = teamElos.reduce((sum, elo) => sum + elo, 0) / teams.length;
+    
+    // Calculate current ELO imbalance
+    const initialImbalance = calculateEloImbalance(teamElos);
+    
+    // Try swaps between all pairs of teams
+    for (let i = 0; i < teams.length; i++) {
+      for (let j = i + 1; j < teams.length; j++) {
+        // Only attempt to balance if there's a significant difference
+        if (Math.abs(teamElos[i] - teamElos[j]) < 0.5) continue;
+        
+        // Find the best ELO-balancing swap
+        const bestSwap = findBestEloSwap(teams[i], teams[j], teamElos[i], teamElos[j], avgElo);
+        
+        if (bestSwap) {
+          // Execute the swap
+          const playerA = teams[i].players[bestSwap.playerAIndex];
+          const playerB = teams[j].players[bestSwap.playerBIndex];
+          
+          teams[i].players[bestSwap.playerAIndex] = playerB;
+          teams[j].players[bestSwap.playerBIndex] = playerA;
+          
+          // Update ELOs
+          teamElos[i] = teamElos[i] - playerA.rating + playerB.rating;
+          teamElos[j] = teamElos[j] - playerB.rating + playerA.rating;
+          
+          // Check if we improved overall balance
+          const newImbalance = calculateEloImbalance(teamElos);
+          if (newImbalance < initialImbalance) {
+            improved = true;
+          }
+        }
+      }
+    }
+    
+    // Stop if no improvements were made
+    if (!improved) break;
+  }
+}
+
+/**
+ * Calculates total ELO imbalance across all teams
+ */
+function calculateEloImbalance(teamElos: number[]): number {
+  if (teamElos.length <= 1) return 0;
+  
+  const avgElo = teamElos.reduce((sum, elo) => sum + elo, 0) / teamElos.length;
+  return teamElos.reduce((sum, elo) => sum + Math.abs(elo - avgElo), 0);
+}
+
+/**
+ * Finds the best ELO-balancing swap between two teams
+ */
+function findBestEloSwap(
+  teamA: Team, 
+  teamB: Team, 
+  eloA: number, 
+  eloB: number, 
+  targetElo: number
+): { playerAIndex: number, playerBIndex: number } | null {
+  let bestImprovement = -1;
+  let bestSwap = null;
+  
+  for (let i = 0; i < teamA.players.length; i++) {
+    for (let j = 0; j < teamB.players.length; j++) {
+      const playerA = teamA.players[i];
+      const playerB = teamB.players[j];
+      
+      // Calculate new ELOs after potential swap
+      const newEloA = eloA - playerA.rating + playerB.rating;
+      const newEloB = eloB - playerB.rating + playerA.rating;
+      
+      // Calculate current deviation from target
+      const currentDeviation = Math.abs(eloA - targetElo) + Math.abs(eloB - targetElo);
+      
+      // Calculate new deviation from target
+      const newDeviation = Math.abs(newEloA - targetElo) + Math.abs(newEloB - targetElo);
+      
+      // Calculate improvement
+      const improvement = currentDeviation - newDeviation;
+      
+      // Check if this is better than our current best
+      if (improvement > bestImprovement) {
+        bestImprovement = improvement;
+        bestSwap = { playerAIndex: i, playerBIndex: j };
+      }
+    }
+  }
+  
+  return bestImprovement > 0 ? bestSwap : null;
+}
+
+/**
+ * Finds the best position-improving swap between two teams
+ */
+function findBestPositionSwap(teamA: Team, teamB: Team, teamAIndex: number, teamBIndex: number): {
+  teamAIndex: number,
+  teamBIndex: number,
+  playerAIndex: number,
+  playerBIndex: number,
+  improvement: number
+} | null {
+  const statsA = calculateTeamStats(teamA);
+  const statsB = calculateTeamStats(teamB);
+  
+  // Calculate current position imbalance
+  const currentImbalance = calculatePositionImbalance(statsA.positionCounts, statsB.positionCounts);
+  
+  let bestSwap: {
+    playerAIndex: number,
+    playerBIndex: number,
+    improvement: number
+  } | null = null;
+  
+  // Try swapping each pair of players
+  for (let i = 0; i < teamA.players.length; i++) {
+    for (let j = 0; j < teamB.players.length; j++) {
+      // Skip if players have the same primary position
+      const playerA = teamA.players[i];
+      const playerB = teamB.players[j];
+      
+      const posA = getPrimaryPosition(playerA);
+      const posB = getPrimaryPosition(playerB);
+      
+      if (posA === posB) continue;
+      
+      // Simulate swap
+      teamA.players[i] = playerB;
+      teamB.players[j] = playerA;
+      
+      // Calculate new stats
+      const newStatsA = calculateTeamStats(teamA);
+      const newStatsB = calculateTeamStats(teamB);
+      const newImbalance = calculatePositionImbalance(newStatsA.positionCounts, newStatsB.positionCounts);
+      
+      // Calculate improvement (lower imbalance is better)
+      const improvement = currentImbalance - newImbalance;
+      
+      // Check if ELOs remain reasonably balanced after swap
+      const eloA = teamA.players.reduce((sum, p) => sum + p.rating, 0);
+      const eloB = teamB.players.reduce((sum, p) => sum + p.rating, 0);
+      const eloDifference = Math.abs(eloA - eloB);
+      
+      // Only consider swaps that maintain ELO balance (less than 1.5 point difference)
+      // and improve position balance
+      if (improvement > 0 && eloDifference < 1.5) {
+        if (!bestSwap || improvement > bestSwap.improvement) {
+          bestSwap = { playerAIndex: i, playerBIndex: j, improvement };
+        }
+      }
+      
+      // Revert swap
+      teamA.players[i] = playerA;
+      teamB.players[j] = playerB;
+    }
+  }
+  
+  if (!bestSwap) return null;
+  
+  return {
+    teamAIndex,
+    teamBIndex,
+    playerAIndex: bestSwap.playerAIndex,
+    playerBIndex: bestSwap.playerBIndex,
+    improvement: bestSwap.improvement
+  };
+}
+
+/**
+ * Gets primary position of a player
+ */
+function getPrimaryPosition(player: Player): Position {
+  if (player && player.position && Array.isArray(player.position) && player.position.length > 0) {
+    return player.position[0];
+  }
+  return 'Midfielder'; // Default position
 }
 
 /**
@@ -304,9 +391,7 @@ function getPositionCounts(players: Player[]): Record<Position, number> {
   };
   
   players.forEach(player => {
-    if (player.position && player.position.length > 0) {
-      counts[player.position[0]]++;
-    }
+    counts[getPrimaryPosition(player)]++;
   });
   
   return counts;
@@ -334,139 +419,6 @@ function calculateRatingStdDev(players: Player[]): number {
 }
 
 /**
- * Calculates a score representing how much a player fits a team's needs
- */
-function calculatePlayerFitScore(player: Player, team: Team, teamStats: TeamStats): number {
-  // Position need score
-  let positionScore = 0;
-  
-  if (player.position && player.position.length > 0) {
-    positionScore = player.position.reduce((score, pos, index) => {
-      // Calculate how much this position is needed in the team (lower count is higher need)
-      const positionCount = teamStats.positionCounts[pos];
-      const maxPositionCount = Math.max(...Object.values(teamStats.positionCounts));
-      const positionNeedFactor = maxPositionCount > 0 ? 1 - (positionCount / maxPositionCount) : 0;
-      
-      // Higher score for primary position, lower for secondary, etc.
-      const preferenceMultiplier = 1 - (index * 0.3);
-      
-      return score + (positionNeedFactor * preferenceMultiplier * 10);
-    }, 0);
-  }
-  
-  // Rating balance score (higher if player's rating helps balance team rating)
-  const avgTeamRating = teamStats.averageRating;
-  const ratingBalanceScore = 10 - Math.abs(player.rating - avgTeamRating);
-  
-  return positionScore + ratingBalanceScore * 1.5;
-}
-
-/**
- * Optimizes teams by swapping players to balance positions and ratings
- */
-function optimizeTeams(teams: Team[], teamSizes: number[]): void {
-  const MAX_ITERATIONS = 100;
-  
-  for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-    let improved = false;
-    
-    // Calculate team statistics
-    const teamStats = teams.map(team => calculateTeamStats(team));
-    
-    // Randomize the order in which we compare teams
-    const teamPairs: [number, number][] = [];
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = i + 1; j < teams.length; j++) {
-        teamPairs.push([i, j]);
-      }
-    }
-    
-    // Shuffle the team pairs
-    for (let i = teamPairs.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [teamPairs[i], teamPairs[j]] = [teamPairs[j], teamPairs[i]];
-    }
-    
-    // Try swapping players between teams in random order
-    for (const [i, j] of teamPairs) {
-      // Attempt player swaps
-      if (trySwapPlayers(teams[i], teams[j], teamStats[i], teamStats[j])) {
-        improved = true;
-        
-        // Update statistics
-        teamStats[i] = calculateTeamStats(teams[i]);
-        teamStats[j] = calculateTeamStats(teams[j]);
-      }
-    }
-    
-    // If no improvements were made, we're done
-    if (!improved) break;
-  }
-  
-  // Final adjustment for uneven teams
-  handleUnevenTeams(teams, teamSizes);
-}
-
-/**
- * Tries to swap players between teams to improve balance
- */
-function trySwapPlayers(
-  teamA: Team,
-  teamB: Team,
-  statsA: TeamStats,
-  statsB: TeamStats
-): boolean {
-  // Calculate current imbalances
-  const currentRatingDiff = Math.abs(statsA.averageRating - statsB.averageRating);
-  const currentStdDevDiff = Math.abs(statsA.stdDev - statsB.stdDev);
-  const currentPositionImbalance = calculatePositionImbalance(statsA.positionCounts, statsB.positionCounts);
-  
-  const currentScore = currentRatingDiff * 3 + currentStdDevDiff * 2 + currentPositionImbalance;
-  
-  // Create arrays of player indices
-  const playerIndicesA = Array.from({ length: teamA.players.length }, (_, i) => i);
-  const playerIndicesB = Array.from({ length: teamB.players.length }, (_, i) => i);
-  
-  // Shuffle the player indices for randomized swapping
-  shuffleArray(playerIndicesA);
-  shuffleArray(playerIndicesB);
-  
-  // Try all possible player swaps
-  for (const i of playerIndicesA) {
-    for (const j of playerIndicesB) {
-      const playerA = teamA.players[i];
-      const playerB = teamB.players[j];
-      
-      // Simulate swap
-      teamA.players[i] = playerB;
-      teamB.players[j] = playerA;
-      
-      // Calculate new stats
-      const newStatsA = calculateTeamStats(teamA);
-      const newStatsB = calculateTeamStats(teamB);
-      
-      // Calculate new imbalances
-      const newRatingDiff = Math.abs(newStatsA.averageRating - newStatsB.averageRating);
-      const newStdDevDiff = Math.abs(newStatsA.stdDev - newStatsB.stdDev);
-      const newPositionImbalance = calculatePositionImbalance(newStatsA.positionCounts, newStatsB.positionCounts);
-      
-      const newScore = newRatingDiff * 3 + newStdDevDiff * 2 + newPositionImbalance;
-      
-      // Keep swap if it improves the score
-      if (newScore < currentScore) {
-        return true;
-      }
-      
-      // Revert swap
-      teamA.players[i] = playerA;
-      teamB.players[j] = playerB;
-    }
-  }
-  
-  return false;
-}
-
-/**
  * Calculates the position imbalance between two teams
  */
 function calculatePositionImbalance(
@@ -478,81 +430,6 @@ function calculatePositionImbalance(
     Math.abs(countsA.Midfielder - countsB.Midfielder) +
     Math.abs(countsA.Defender - countsB.Defender)
   );
-}
-
-/**
- * Handles uneven teams by ensuring larger teams have slightly lower average ratings
- */
-function handleUnevenTeams(teams: Team[], teamSizes: number[]): void {
-  // Check if we have uneven teams
-  if (new Set(teamSizes).size === 1) return;
-  
-  // Sort teams by size (larger teams first)
-  const sortedTeamIndices = teams
-    .map((team, index) => ({ team, index, size: team.players.length }))
-    .sort((a, b) => b.size - a.size);
-  
-  // Calculate average ratings
-  const avgRatings = teams.map(team => calculateAverageRating(team.players));
-  
-  // Adjust ratings for uneven teams by swapping high/low rated players
-  for (let i = 0; i < Math.floor(teams.length / 2); i++) {
-    const largerTeamIndex = sortedTeamIndices[i].index;
-    const smallerTeamIndex = sortedTeamIndices[teams.length - 1 - i].index;
-    
-    // Only proceed if teams have different sizes
-    if (teams[largerTeamIndex].players.length > teams[smallerTeamIndex].players.length) {
-      // If larger team has higher average rating, try to swap players
-      if (avgRatings[largerTeamIndex] > avgRatings[smallerTeamIndex]) {
-        adjustRatingsBetweenUnevenTeams(
-          teams[largerTeamIndex], 
-          teams[smallerTeamIndex]
-        );
-      }
-    }
-  }
-}
-
-/**
- * Adjusts ratings between two uneven teams by swapping players
- */
-function adjustRatingsBetweenUnevenTeams(
-  largerTeam: Team,
-  smallerTeam: Team
-): void {
-  // Sort players in each team by rating
-  const sortedLargerTeam = [...largerTeam.players].sort((a, b) => b.rating - a.rating);
-  const sortedSmallerTeam = [...smallerTeam.players].sort((a, b) => a.rating - b.rating);
-  
-  // Number of players to potentially swap (proportional to team size difference)
-  const sizeDifference = largerTeam.players.length - smallerTeam.players.length;
-  const swapsToTry = Math.min(
-    Math.ceil(sizeDifference / 2), 
-    Math.floor(Math.min(largerTeam.players.length, smallerTeam.players.length) / 3)
-  );
-  
-  // Try swapping top players from larger team with bottom players from smaller team
-  for (let i = 0; i < swapsToTry; i++) {
-    if (i >= sortedLargerTeam.length || i >= sortedSmallerTeam.length) break;
-    
-    const topPlayerFromLargerTeam = sortedLargerTeam[i];
-    const bottomPlayerFromSmallerTeam = sortedSmallerTeam[sortedSmallerTeam.length - 1 - i];
-    
-    // Only swap if it makes sense rating-wise
-    if (topPlayerFromLargerTeam.rating > bottomPlayerFromSmallerTeam.rating) {
-      // Find these players in the original arrays
-      const largerTeamPlayerIndex = largerTeam.players.findIndex(p => p.name === topPlayerFromLargerTeam.name);
-      const smallerTeamPlayerIndex = smallerTeam.players.findIndex(p => p.name === bottomPlayerFromSmallerTeam.name);
-      
-      // Make sure we found the players
-      if (largerTeamPlayerIndex !== -1 && smallerTeamPlayerIndex !== -1) {
-        // Swap the players
-        const temp = largerTeam.players[largerTeamPlayerIndex];
-        largerTeam.players[largerTeamPlayerIndex] = smallerTeam.players[smallerTeamPlayerIndex];
-        smallerTeam.players[smallerTeamPlayerIndex] = temp;
-      }
-    }
-  }
 }
 
 /**
