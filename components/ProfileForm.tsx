@@ -3,7 +3,7 @@
 import { useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { saveUserProfile } from "@/lib/ddb/users";
+import { updateUserProfile } from "@/lib/ddb/users";
 import { ProfileFormProps, PreferredPositions } from "@/data/types";
 import PositionRankingTabs from "./PositionRankingTabs";
 
@@ -56,11 +56,11 @@ export default function ProfileForm({ initialData = {} }: ProfileFormProps) {
         throw new Error("User not authenticated");
       }
       
-      await saveUserProfile(user.userId, formData);
+      await updateUserProfile(user.userId, formData);
 
       setMessage({
         type: "success",
-        text: "Profile saved successfully!",
+        text: "Profile updated successfully!",
       });
 
       // Redirect to profile view page after successful save
