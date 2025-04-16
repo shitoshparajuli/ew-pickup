@@ -361,7 +361,35 @@ export default function GamePage({ params }: GamePageProps) {
             {/* Teams Section - Using the division algorithm */}
             {showTeams && teams.length > 0 && (
               <div className="animate-fade-in">
-                <h2 className="text-xl font-semibold mb-4 dark:text-white">Teams</h2>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold dark:text-white">Teams</h2>
+                  <button
+                    onClick={() => {
+                      // Format teams data
+                      const formattedTeams = teams.map((teamPlayers, index) => {
+                        const teamNames = ['Red Team', 'Blue Team', 'Green Team', 'Black Team'];
+                        const teamName = teamNames[index];
+                        const players = teamPlayers.map(player => 
+                          player.isGuest ? `${player.name} (Guest of ${player.hostName})` : player.name
+                        ).join('\n');
+                        return `${teamName}:\n${players}`;
+                      }).join('\n\n');
+
+                      // Copy to clipboard
+                      navigator.clipboard.writeText(formattedTeams)
+                        .then(() => {
+                          alert('Teams copied to clipboard!');
+                        })
+                        .catch(err => {
+                          console.error('Failed to copy teams:', err);
+                          alert('Failed to copy teams to clipboard');
+                        });
+                    }}
+                    className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-full text-sm font-medium transition duration-200"
+                  >
+                    Copy Teams
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {teams.map((teamPlayers, teamIndex) => {
                     // Color map for teams
