@@ -28,16 +28,16 @@
         "GOOGLE"
       ],
       "redirect_sign_in_uri": [
-        "http://localhost:3000/auth/callback", "https://ew-pickup.vercel.app/auth/callback"
+        "http://localhost:3000/auth/callback", "https://ew-pickup.vercel.app/auth/callback", "https://ewfcseattle.org/auth/callback"
       ],
       "redirect_sign_out_uri": [
-        "http://localhost:3000", "https://ew-pickup.vercel.app/"
+        "http://localhost:3000", "https://ew-pickup.vercel.app/", "https://ewfcseattle.org/"
       ],
       "logout_uri": [
-        "http://localhost:3000", "https://ew-pickup.vercel.app/"
+        "http://localhost:3000", "https://ew-pickup.vercel.app/", "https://ewfcseattle.org/"
       ],
       "redirect_uri": [
-        "http://localhost:3000", "https://ew-pickup.vercel.app/"
+        "http://localhost:3000", "https://ew-pickup.vercel.app/", "https://ewfcseattle.org/"
       ],
       "response_type": "code",
       "scopes": [
