@@ -5,7 +5,7 @@ import {
   GetCommand,
   QueryCommand
 } from "@aws-sdk/lib-dynamodb";
-import { Team, Player } from "@/data/types";
+import { Team, Player, Position } from "@/data/types";
 
 // Add SimplifiedPlayer and SimplifiedTeam interface definitions
 export interface SimplifiedPlayer {
@@ -23,6 +23,7 @@ export interface MinimalPlayerData {
   uuid?: string;      // Only for registered players
   isGuest?: boolean;  // Only for guests
   hostName?: string;  // Only for guests
+  actualPosition?: Position; // Player's actual position
 }
 
 const client = new DynamoDBClient({
@@ -55,6 +56,11 @@ function playerToMinimalData(player: Player): MinimalPlayerData {
   const minimalData: MinimalPlayerData = {
     name: player.name
   };
+  
+  // Include actualPosition if available
+  if (player.actualPosition) {
+    minimalData.actualPosition = player.actualPosition;
+  }
   
   // For guests, include isGuest and hostName
   if (player.isGuest) {
@@ -182,6 +188,7 @@ function ensurePlayerFormat(playerData: any): Player {
     uuid: playerData.uuid || (playerData.UserId || `guest-${Math.random().toString(36).substring(2, 9)}`),
     rating: 7, // Default rating
     position: ['Midfielder'], // Default position
+    actualPosition: playerData.actualPosition || 'Midfielder', // Use provided or default position
     isGuest: !!playerData.isGuest,
     hostName: playerData.hostName
   };

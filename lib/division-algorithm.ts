@@ -363,8 +363,8 @@ function findBestPositionSwap(teamA: Team, teamB: Team, teamAIndex: number, team
  * Gets primary position of a player
  */
 function getPrimaryPosition(player: Player): Position {
-  if (player && player.position && Array.isArray(player.position) && player.position.length > 0) {
-    return player.position[0];
+  if (player && player.actualPosition) {
+    return player.actualPosition;
   }
   return 'Midfielder'; // Default position
 }

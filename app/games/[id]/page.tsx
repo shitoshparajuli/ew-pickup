@@ -188,6 +188,11 @@ export default function GamePage({ params }: GamePageProps) {
         if (!player.position || player.position.length === 0) {
           player.position = ['Midfielder'];
         }
+
+        // Ensure actualPosition is set
+        if (!player.actualPosition) {
+          player.actualPosition = player.position[0];
+        }
       });
       
       // Add guests to the players list
@@ -201,6 +206,7 @@ export default function GamePage({ params }: GamePageProps) {
               name: `${guest.name}`,
               rating: guest.rating || 7, // Use provided rating or default to 7
               position: ['Midfielder'], // Default position
+              actualPosition: 'Midfielder', // Default position
               isGuest: true,
               hostName: `${participant.FirstName} ${participant.LastName}`
             });

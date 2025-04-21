@@ -120,6 +120,7 @@ export async function getBatchPlayers(
           uuid: item.UserId,
           name: `${item.FirstName} ${item.LastName}`,
           rating: item.Rating || 7, // Default rating, adjust as needed
+          actualPosition: item.ActualPosition as Position || null,
           position: item.PreferredPositions as Position[] || []
         });
       });

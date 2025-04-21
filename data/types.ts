@@ -9,6 +9,7 @@ export interface UserProfile {
   FirstName: string;
   LastName: string;
   PreferredPositions: string[];
+  ActualPosition?: Position;
   CreatedAt?: string;
   UpdatedAt?: string;
   IsMember?: boolean;
@@ -87,6 +88,7 @@ export interface Player {
   name: string;
   rating: number;
   position: Position[];
+  actualPosition: Position | null;
   isGuest?: boolean;
   hostName?: string;
 }
