@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Game } from '@/data/types';
 import { use } from 'react';
-import { getGameById } from '@/lib/ddb/games';
+import { getGameById, updateGameStatus } from '@/lib/ddb/games';
 import { getGameParticipants, isUserParticipatingInGame, deleteGameParticipant } from '@/lib/ddb/game-participants';
 import { useAuth } from '@/context/AuthContext';
 import { divideTeams } from '@/lib/division-algorithm';
@@ -151,6 +151,74 @@ export default function GamePage({ params }: GamePageProps) {
     } else {
       // Handle join action - redirect to check-in
       router.push(`/check-in?gameId=${id}`);
+    }
+  };
+  
+  const handleCloseGame = async () => {
+    if (!isAdmin || !game || game.status !== 'UPCOMING') {
+      return;
+    }
+    
+    // Add confirmation warning
+    const confirmClose = window.confirm(
+      "Are you sure you want to close this game? This will mark it as completed and it will no longer appear in upcoming games."
+    );
+    
+    if (!confirmClose) {
+      return; // Exit if user cancels
+    }
+    
+    try {
+      setIsLoading(true);
+      await updateGameStatus(id, "COMPLETED");
+      
+      // Update local state
+      setGame({
+        ...game,
+        status: "COMPLETED"
+      });
+      
+      // Refresh the page to show updated status
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to close game:", error);
+      alert("Failed to close the game. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleReopenGame = async () => {
+    if (!isAdmin || !game || game.status !== 'COMPLETED') {
+      return;
+    }
+    
+    // Add confirmation warning
+    const confirmReopen = window.confirm(
+      "Are you sure you want to reopen this game? This will mark it as upcoming and it will appear in the upcoming games list."
+    );
+    
+    if (!confirmReopen) {
+      return; // Exit if user cancels
+    }
+    
+    try {
+      setIsLoading(true);
+      await updateGameStatus(id, "UPCOMING");
+      
+      // Update local state
+      setGame({
+        ...game,
+        status: "UPCOMING"
+      });
+      
+      // Refresh the page to show updated status
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to reopen game:", error);
+      alert("Failed to reopen the game. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -319,8 +387,8 @@ export default function GamePage({ params }: GamePageProps) {
             </div>
           </div>
           
-          {status === 'UPCOMING' && (
-            <div className="mb-8">
+          <div className="flex flex-wrap gap-4 mb-8">
+            {status === 'UPCOMING' && (
               <button 
                 onClick={handleParticipationAction}
                 className={`${isParticipating ? 'bg-red-600 hover:bg-red-700' : 'bg-black hover:bg-gray-800'} border border-black text-white px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
@@ -330,8 +398,8 @@ export default function GamePage({ params }: GamePageProps) {
                   ? (isParticipating ? 'Bailing out...' : 'Joining...') 
                   : (isParticipating ? 'Bail out' : 'Join This Game')}
               </button>
-            </div>
-          )}
+            )}
+          </div>
           
           <div>
             
@@ -493,6 +561,40 @@ export default function GamePage({ params }: GamePageProps) {
                   </div>
                 </div>
               </>
+            )}
+
+            {/* Admin Game Management Section */}
+            {isAdmin && (
+              <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold mb-4 dark:text-white">Game Management</h2>
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                  <p className="mb-4 text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Admin controls:</span> You can change the status of this game below.
+                  </p>
+                  
+                  <div className="flex gap-4">
+                    {status === 'UPCOMING' && (
+                      <button 
+                        onClick={handleCloseGame}
+                        className="bg-red-600 hover:bg-red-700 border border-red-600 text-white px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Closing...' : 'Close Game'}
+                      </button>
+                    )}
+                    
+                    {status === 'COMPLETED' && (
+                      <button 
+                        onClick={handleReopenGame}
+                        className="bg-green-600 hover:bg-green-700 border border-green-600 text-white px-6 py-3 rounded-full transition duration-200 font-bold cursor-pointer"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Reopening...' : 'Reopen Game'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
 
           </div>

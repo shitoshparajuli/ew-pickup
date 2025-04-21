@@ -284,3 +284,37 @@ export async function getPastGames(limit: number = 5): Promise<Game[]> {
     throw error;
   }
 }
+
+export async function updateGameStatus(gameId: string, status: "UPCOMING" | "COMPLETED") {
+  try {
+    // First get the existing game data
+    const command = new GetCommand({
+      TableName: "Games",
+      Key: {
+        GameId: gameId,
+        Date: gameId // Including Date as part of the composite key
+      }
+    });
+    
+    const response = await docClient.send(command);
+    
+    if (!response.Item) {
+      throw new Error("Game not found");
+    }
+    
+    // Update the status while keeping all existing data
+    const updateCommand = new PutCommand({
+      TableName: "Games",
+      Item: {
+        ...response.Item,
+        Status: status,
+      },
+    });
+
+    await docClient.send(updateCommand);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating game status:", error);
+    throw error;
+  }
+}
