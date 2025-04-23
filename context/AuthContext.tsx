@@ -32,7 +32,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (currentUser) {
         const userProfile = await getUserProfile(currentUser.userId);
-        console.log("userProfile", userProfile);
         setIsAdmin(userProfile?.IsAdmin || false);
         setIsMember(userProfile?.IsMember || false);
       }
