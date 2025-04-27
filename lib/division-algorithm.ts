@@ -74,15 +74,30 @@ export function divideTeams(players: Player[], numTeams: 2 | 4, randomSeed = Mat
 
 /**
  * Performs a snake draft to distribute players across teams
+ * Top players will be marked as protected to prevent them from being moved during balancing
  */
 function snakeDraft(players: Player[], teams: Team[]): void {
   let direction = 1; // 1 for forward, -1 for backward
   let teamIndex = 0;
+  
+  // Define how many players to protect per team (typically the first pick)
+  const protectedPlayersPerTeam = 1;
+  let protectedCount = 0;
 
   // Distribute players using snake draft
   while (players.length > 0) {
+    const player = players.shift()!;
+    
+    // Mark top players as protected from being moved during balancing
+    // We'll protect the first pick for each team
+    if (Math.floor(protectedCount / teams.length) < protectedPlayersPerTeam) {
+      // Add a protected flag to the player
+      (player as any)._protected = true;
+      protectedCount++;
+    }
+    
     // Add player to current team
-    teams[teamIndex].players.push(players.shift()!);
+    teams[teamIndex].players.push(player);
     
     // Move to next team using snake pattern
     teamIndex += direction;
@@ -129,6 +144,13 @@ function distributeExtraPlayers(extraPlayers: Player[], teams: Team[]): void {
 }
 
 /**
+ * Checks if a player is protected from being moved
+ */
+function isProtectedPlayer(player: Player): boolean {
+  return (player as any)._protected === true;
+}
+
+/**
  * Balances positions across teams through player swaps
  */
 function balancePositions(teams: Team[]): void {
@@ -147,16 +169,38 @@ function balancePositions(teams: Team[]): void {
       teamBIndex: number,
       playerAIndex: number,
       playerBIndex: number,
-      improvement: number
+      improvement: number,
+      position?: Position // Track the position being balanced
     } | null = null;
     
-    // Try swaps between each pair of teams
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = i + 1; j < teams.length; j++) {
-        const possibleSwap = findBestPositionSwap(teams[i], teams[j], i, j);
-        
-        if (possibleSwap && (!bestSwap || possibleSwap.improvement > bestSwap.improvement)) {
-          bestSwap = possibleSwap;
+    // Try to balance each position type one by one for better distribution
+    const positionsToBalance: Position[] = ['Attacker', 'Midfielder', 'Defender'];
+    
+    for (const positionToBalance of positionsToBalance) {
+      // Try swaps between each pair of teams for this specific position
+      for (let i = 0; i < teams.length; i++) {
+        for (let j = i + 1; j < teams.length; j++) {
+          const possibleSwap = findBestPositionSwapForPosition(teams[i], teams[j], i, j, positionToBalance);
+          
+          if (possibleSwap && (!bestSwap || possibleSwap.improvement > bestSwap.improvement)) {
+            bestSwap = {
+              ...possibleSwap,
+              position: positionToBalance
+            };
+          }
+        }
+      }
+    }
+    
+    // If no position-specific swap found, try general position balancing
+    if (!bestSwap || bestSwap.improvement <= 0) {
+      for (let i = 0; i < teams.length; i++) {
+        for (let j = i + 1; j < teams.length; j++) {
+          const possibleSwap = findBestPositionSwap(teams[i], teams[j], i, j);
+          
+          if (possibleSwap && (!bestSwap || possibleSwap.improvement > bestSwap.improvement)) {
+            bestSwap = possibleSwap;
+          }
         }
       }
     }
@@ -177,110 +221,100 @@ function balancePositions(teams: Team[]): void {
 }
 
 /**
- * Balances ELO ratings across teams without changing team sizes
+ * Finds the best swap for a specific position between two teams
  */
-function balanceTeamElos(teams: Team[]): void {
-  const MAX_ELO_ITERATIONS = 10;
-  
-  for (let iteration = 0; iteration < MAX_ELO_ITERATIONS; iteration++) {
-    let improved = false;
-    
-    // Calculate current team ELOs
-    const teamElos = teams.map(team => 
-      team.players.reduce((sum, player) => sum + player.rating, 0)
-    );
-    
-    // Calculate average team ELO
-    const avgElo = teamElos.reduce((sum, elo) => sum + elo, 0) / teams.length;
-    
-    // Calculate current ELO imbalance
-    const initialImbalance = calculateEloImbalance(teamElos);
-    
-    // Try swaps between all pairs of teams
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = i + 1; j < teams.length; j++) {
-        // Only attempt to balance if there's a significant difference
-        if (Math.abs(teamElos[i] - teamElos[j]) < 0.5) continue;
-        
-        // Find the best ELO-balancing swap
-        const bestSwap = findBestEloSwap(teams[i], teams[j], teamElos[i], teamElos[j], avgElo);
-        
-        if (bestSwap) {
-          // Execute the swap
-          const playerA = teams[i].players[bestSwap.playerAIndex];
-          const playerB = teams[j].players[bestSwap.playerBIndex];
-          
-          teams[i].players[bestSwap.playerAIndex] = playerB;
-          teams[j].players[bestSwap.playerBIndex] = playerA;
-          
-          // Update ELOs
-          teamElos[i] = teamElos[i] - playerA.rating + playerB.rating;
-          teamElos[j] = teamElos[j] - playerB.rating + playerA.rating;
-          
-          // Check if we improved overall balance
-          const newImbalance = calculateEloImbalance(teamElos);
-          if (newImbalance < initialImbalance) {
-            improved = true;
-          }
-        }
-      }
-    }
-    
-    // Stop if no improvements were made
-    if (!improved) break;
-  }
-}
-
-/**
- * Calculates total ELO imbalance across all teams
- */
-function calculateEloImbalance(teamElos: number[]): number {
-  if (teamElos.length <= 1) return 0;
-  
-  const avgElo = teamElos.reduce((sum, elo) => sum + elo, 0) / teamElos.length;
-  return teamElos.reduce((sum, elo) => sum + Math.abs(elo - avgElo), 0);
-}
-
-/**
- * Finds the best ELO-balancing swap between two teams
- */
-function findBestEloSwap(
+function findBestPositionSwapForPosition(
   teamA: Team, 
   teamB: Team, 
-  eloA: number, 
-  eloB: number, 
-  targetElo: number
-): { playerAIndex: number, playerBIndex: number } | null {
-  let bestImprovement = -1;
-  let bestSwap = null;
+  teamAIndex: number, 
+  teamBIndex: number,
+  targetPosition: Position
+): {
+  teamAIndex: number,
+  teamBIndex: number,
+  playerAIndex: number,
+  playerBIndex: number,
+  improvement: number
+} | null {
+  // Get current position counts
+  const statsA = calculateTeamStats(teamA);
+  const statsB = calculateTeamStats(teamB);
   
+  // Calculate position imbalance for the specific position
+  const currentImbalance = Math.abs(statsA.positionCounts[targetPosition] - statsB.positionCounts[targetPosition]);
+  
+  let bestSwap: {
+    playerAIndex: number,
+    playerBIndex: number,
+    improvement: number
+  } | null = null;
+  
+  // Try swapping each pair of players
   for (let i = 0; i < teamA.players.length; i++) {
     for (let j = 0; j < teamB.players.length; j++) {
       const playerA = teamA.players[i];
       const playerB = teamB.players[j];
       
-      // Calculate new ELOs after potential swap
-      const newEloA = eloA - playerA.rating + playerB.rating;
-      const newEloB = eloB - playerB.rating + playerA.rating;
-      
-      // Calculate current deviation from target
-      const currentDeviation = Math.abs(eloA - targetElo) + Math.abs(eloB - targetElo);
-      
-      // Calculate new deviation from target
-      const newDeviation = Math.abs(newEloA - targetElo) + Math.abs(newEloB - targetElo);
-      
-      // Calculate improvement
-      const improvement = currentDeviation - newDeviation;
-      
-      // Check if this is better than our current best
-      if (improvement > bestImprovement) {
-        bestImprovement = improvement;
-        bestSwap = { playerAIndex: i, playerBIndex: j };
+      // Skip if either player is protected
+      if (isProtectedPlayer(playerA) || isProtectedPlayer(playerB)) {
+        continue;
       }
+      
+      const posA = getPrimaryPosition(playerA);
+      const posB = getPrimaryPosition(playerB);
+      
+      // At least one player should be of the position we're trying to balance
+      if (posA !== targetPosition && posB !== targetPosition) {
+        continue;
+      }
+      
+      // Skip if players have the same position (no change in balance)
+      if (posA === posB) {
+        continue;
+      }
+      
+      // Simulate swap
+      teamA.players[i] = playerB;
+      teamB.players[j] = playerA;
+      
+      // Calculate new stats
+      const newStatsA = calculateTeamStats(teamA);
+      const newStatsB = calculateTeamStats(teamB);
+      
+      // Calculate new imbalance for this specific position
+      const newImbalance = Math.abs(newStatsA.positionCounts[targetPosition] - newStatsB.positionCounts[targetPosition]);
+      
+      // Calculate improvement (lower imbalance is better)
+      const improvement = currentImbalance - newImbalance;
+      
+      // Check if ELOs remain reasonably balanced after swap
+      const eloA = teamA.players.reduce((sum, p) => sum + p.rating, 0);
+      const eloB = teamB.players.reduce((sum, p) => sum + p.rating, 0);
+      const eloDifference = Math.abs(eloA - eloB);
+      
+      // Only consider swaps that maintain ELO balance (less than 1.5 point difference)
+      // and improve position balance
+      if (improvement > 0 && eloDifference < 1.5) {
+        if (!bestSwap || improvement > bestSwap.improvement) {
+          bestSwap = { playerAIndex: i, playerBIndex: j, improvement };
+        }
+      }
+      
+      // Revert swap
+      teamA.players[i] = playerA;
+      teamB.players[j] = playerB;
     }
   }
   
-  return bestImprovement > 0 ? bestSwap : null;
+  if (!bestSwap) return null;
+  
+  return {
+    teamAIndex,
+    teamBIndex,
+    playerAIndex: bestSwap.playerAIndex,
+    playerBIndex: bestSwap.playerBIndex,
+    improvement: bestSwap.improvement
+  };
 }
 
 /**
@@ -308,10 +342,15 @@ function findBestPositionSwap(teamA: Team, teamB: Team, teamAIndex: number, team
   // Try swapping each pair of players
   for (let i = 0; i < teamA.players.length; i++) {
     for (let j = 0; j < teamB.players.length; j++) {
-      // Skip if players have the same primary position
       const playerA = teamA.players[i];
       const playerB = teamB.players[j];
       
+      // Skip if either player is protected
+      if (isProtectedPlayer(playerA) || isProtectedPlayer(playerB)) {
+        continue;
+      }
+      
+      // Skip if players have the same primary position
       const posA = getPrimaryPosition(playerA);
       const posB = getPrimaryPosition(playerB);
       
@@ -447,4 +486,135 @@ export function evaluateTeamBalance(teams: Team[]): {
     positionCounts: teams.map(team => getPositionCounts(team.players)),
     teamSizes: teams.map(team => team.players.length)
   };
+}
+
+/**
+ * Balances ELO ratings across teams without changing team sizes
+ * Avoids swapping players in first and last quartile by rating
+ */
+function balanceTeamElos(teams: Team[]): void {
+  const MAX_ELO_ITERATIONS = 10;
+  
+  for (let iteration = 0; iteration < MAX_ELO_ITERATIONS; iteration++) {
+    let improved = false;
+    
+    // Calculate current team ELOs
+    const teamElos = teams.map(team => 
+      team.players.reduce((sum, player) => sum + player.rating, 0)
+    );
+    
+    // Calculate average team ELO
+    const avgElo = teamElos.reduce((sum, elo) => sum + elo, 0) / teams.length;
+    
+    // Calculate current ELO imbalance
+    const initialImbalance = calculateEloImbalance(teamElos);
+    
+    // Try swaps between all pairs of teams
+    for (let i = 0; i < teams.length; i++) {
+      for (let j = i + 1; j < teams.length; j++) {
+        // Only attempt to balance if there's a significant difference
+        if (Math.abs(teamElos[i] - teamElos[j]) < 0.5) continue;
+        
+        // Find the best ELO-balancing swap
+        const bestSwap = findBestEloSwap(teams[i], teams[j], teamElos[i], teamElos[j], avgElo);
+        
+        if (bestSwap) {
+          // Execute the swap
+          const playerA = teams[i].players[bestSwap.playerAIndex];
+          const playerB = teams[j].players[bestSwap.playerBIndex];
+          
+          teams[i].players[bestSwap.playerAIndex] = playerB;
+          teams[j].players[bestSwap.playerBIndex] = playerA;
+          
+          // Update ELOs
+          teamElos[i] = teamElos[i] - playerA.rating + playerB.rating;
+          teamElos[j] = teamElos[j] - playerB.rating + playerA.rating;
+          
+          // Check if we improved overall balance
+          const newImbalance = calculateEloImbalance(teamElos);
+          if (newImbalance < initialImbalance) {
+            improved = true;
+          }
+        }
+      }
+    }
+    
+    // Stop if no improvements were made
+    if (!improved) break;
+  }
+}
+
+/**
+ * Calculates total ELO imbalance across all teams
+ */
+function calculateEloImbalance(teamElos: number[]): number {
+  if (teamElos.length <= 1) return 0;
+  
+  const avgElo = teamElos.reduce((sum, elo) => sum + elo, 0) / teamElos.length;
+  return teamElos.reduce((sum, elo) => sum + Math.abs(elo - avgElo), 0);
+}
+
+/**
+ * Finds the best ELO-balancing swap between two teams
+ * Avoids swapping players in first and last quartile by rating
+ */
+function findBestEloSwap(
+  teamA: Team, 
+  teamB: Team, 
+  eloA: number, 
+  eloB: number, 
+  targetElo: number
+): { playerAIndex: number, playerBIndex: number } | null {
+  let bestImprovement = -1;
+  let bestSwap = null;
+  
+  // Get all players from both teams
+  const allPlayers = [...teamA.players, ...teamB.players];
+  
+  // Sort players by rating
+  const sortedPlayers = [...allPlayers].sort((a, b) => a.rating - b.rating);
+  
+  // Determine threshold values for first and last quartile
+  const firstQuartileThreshold = sortedPlayers[Math.floor(sortedPlayers.length * 0.25)].rating;
+  const lastQuartileThreshold = sortedPlayers[Math.floor(sortedPlayers.length * 0.75)].rating;
+  
+  for (let i = 0; i < teamA.players.length; i++) {
+    for (let j = 0; j < teamB.players.length; j++) {
+      const playerA = teamA.players[i];
+      const playerB = teamB.players[j];
+      
+      // Skip if either player is protected
+      if (isProtectedPlayer(playerA) || isProtectedPlayer(playerB)) {
+        continue;
+      }
+      
+      // Skip players in first and last quartile by rating
+      // Only swap players in middle range (Q2 and Q3)
+      if (playerA.rating <= firstQuartileThreshold || playerA.rating >= lastQuartileThreshold ||
+          playerB.rating <= firstQuartileThreshold || playerB.rating >= lastQuartileThreshold) {
+        continue;
+      }
+      
+      // Calculate new ELOs after potential swap
+      const newEloA = eloA - playerA.rating + playerB.rating;
+      const newEloB = eloB - playerB.rating + playerA.rating;
+      
+      // Calculate current deviation from target
+      const currentDeviation = Math.abs(eloA - targetElo) + Math.abs(eloB - targetElo);
+      
+      // Calculate new deviation from target
+      const newDeviation = Math.abs(newEloA - targetElo) + Math.abs(newEloB - targetElo);
+      
+      // Calculate improvement
+      const improvement = currentDeviation - newDeviation;
+      
+      // Check if this is better than our current best
+      if (improvement > bestImprovement) {
+        bestImprovement = improvement;
+        bestSwap = { playerAIndex: i, playerBIndex: j };
+      }
+    }
+  }
+  
+  return bestImprovement > 0 ? bestSwap : null;
 }
