@@ -28,6 +28,7 @@ export interface Game {
   winner?: string;
   loser?: string;
   isPaid?: boolean;
+  guestFee?: number;
 }
 
 // Cognito/Amplify Auth types

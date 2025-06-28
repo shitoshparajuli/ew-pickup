@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserProfile, updateUserProfile } from '@/lib/ddb/users';
 import { createGameParticipant } from '@/lib/ddb/game-participants';
 import { useAuth } from '@/context/AuthContext';
+import { getGameById } from '@/lib/ddb/games';
 
 // Define skill level options with corresponding rating values
 const SKILL_LEVELS = [
@@ -130,7 +131,11 @@ function CheckInContent() {
         
         // Calculate the payment due amount
         const currentPaymentDue = userProfile?.PaymentDue || 0;
-        const additionalPayment = guestList.length * 15; // $15 per guest
+        // Fetch the game from DDB
+        const game = await getGameById(gameId);
+        const guestFee = game?.isPaid ? (game?.guestFee ?? 0) : 0;
+        const additionalPayment = guestList.length * guestFee;
+
         const newPaymentDue = currentPaymentDue + additionalPayment;
         
         // Update the user profile with the new PaymentDue amount

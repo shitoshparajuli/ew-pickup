@@ -10,11 +10,13 @@ export default function CreateGamePage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     date: "",
     startTime: "",
     location: "",
     isPaid: false,
+    guestFee: ""
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,7 +25,10 @@ export default function CreateGamePage() {
     setError(null);
 
     try {
-      await createGame(formData);
+      await createGame({
+        ...formData,
+        guestFee: formData.isPaid ? 15 : 0,
+      });
       router.push("/games");
     } catch (err) {
       setError("Failed to create game. Please try again.");
@@ -56,9 +61,11 @@ export default function CreateGamePage() {
     <div className="container mx-auto py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-8 text-center">Create New Game</h1>
-        
+
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
+
+            {/* Date */}
             <div>
               <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Game Date
@@ -74,6 +81,7 @@ export default function CreateGamePage() {
               />
             </div>
 
+            {/* Start Time */}
             <div>
               <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Start Time
@@ -89,6 +97,7 @@ export default function CreateGamePage() {
               />
             </div>
 
+            {/* Location */}
             <div>
               <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Game Location
@@ -100,11 +109,12 @@ export default function CreateGamePage() {
                 value={formData.location}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-black focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 placeholder="Enter game location"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-black focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
             </div>
 
+            {/* Paid Toggle */}
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -119,12 +129,14 @@ export default function CreateGamePage() {
               </label>
             </div>
 
+            {/* Error */}
             {error && (
               <div className="text-red-500 text-sm mt-2">
                 {error}
               </div>
             )}
 
+            {/* Submit */}
             <div className="flex justify-center">
               <button
                 type="submit"
