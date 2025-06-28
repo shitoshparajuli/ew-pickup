@@ -364,17 +364,28 @@ export default function GamePage({ params }: GamePageProps) {
         
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 mb-8">
           <h1 className="text-3xl font-bold mb-2 dark:text-white">EW pick-up game</h1>
-          <p className="text-xl text-gray-700 dark:text-gray-300 mb-6">
+          <p className="text-xl text-gray-700 dark:text-gray-300 mb-4">
             {game?.date ? new Date(game.date + "T00:00:00-08:00").toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : ''} at {(() => {
-              // Convert from 24-hour to 12-hour time format with AM/PM
               if (!game?.time) return '';
               const [hours, minutes] = game.time.split(':');
               const hour = parseInt(hours, 10);
               const amPm = hour >= 12 ? 'PM' : 'AM';
-              const hour12 = hour % 12 || 12; // Convert 0 to 12 for 12 AM
+              const hour12 = hour % 12 || 12;
               return `${hour12}:${minutes} ${amPm}`;
             })()}
           </p>
+
+          {/* Banner for Paid or Free Game */}
+          {game.isPaid ? (
+            <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded mb-6 font-medium">
+              💰 This is a paid game. Guest fee: ${game.guestFee ?? 15}
+            </div>
+          ) : (
+            <div className="bg-green-100 text-green-800 px-4 py-3 rounded mb-6 font-medium">
+              This is a free game. No fee required.
+            </div>
+          )}
+
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div>

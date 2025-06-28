@@ -18,9 +18,10 @@ interface CreateGameParams {
   startTime: string;
   location: string;
   isPaid: boolean;
+  guestFee?: number;
 }
 
-export async function createGame({ date, startTime, location, isPaid }: CreateGameParams) {
+export async function createGame({ date, startTime, location, isPaid, guestFee }: CreateGameParams) {
   try {
     const command = new PutCommand({
       TableName: "Games",
@@ -31,6 +32,7 @@ export async function createGame({ date, startTime, location, isPaid }: CreateGa
         Location: location,
         Status: "UPCOMING",
         IsPaid: isPaid,
+        GuestFee: isPaid ? guestFee ?? 0 : 0, // ✅ store guest fee only if paid
       },
     });
 
@@ -41,6 +43,7 @@ export async function createGame({ date, startTime, location, isPaid }: CreateGa
     throw error;
   }
 }
+
 
 export async function getNextGame() {
   try {
@@ -105,7 +108,8 @@ export async function getGameById(id: string) {
       time: response.Item.StartTime,
       location: response.Item.Location,
       status: response.Item.Status,
-      isPaid: response.Item.IsPaid
+      isPaid: response.Item.IsPaid,
+      guestFee: response.Item.GuestFee ?? 0,
     };
   } catch (error) {
     console.error("Error getting game by ID:", error);
