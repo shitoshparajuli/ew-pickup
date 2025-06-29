@@ -14,6 +14,7 @@ export interface UserProfile {
   UpdatedAt?: string;
   IsMember?: boolean;
   IsAdmin?: boolean;
+  IsFinanceAdmin?: boolean;
   PaymentDue?: number;
 }
 
@@ -53,6 +54,7 @@ export interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isMember: boolean;
+  isFinanceAdmin: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
 }
