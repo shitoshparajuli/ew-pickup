@@ -6,7 +6,7 @@ import { UserProfile } from "@/data/types";
 import { useAuth } from "@/context/AuthContext";
 
 export default function MembersPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isFinanceAdmin } = useAuth();
   const [members, setMembers] = useState<UserProfile[]>([]);
   const [sortField, setSortField] = useState<"name" | "paymentDue">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -129,7 +129,7 @@ export default function MembersPage() {
   };
 
   const renderPaymentAmount = (userId: string, amount: number = 0) => {
-    if (editingPayment === userId && isAdmin) {
+    if (editingPayment === userId && isFinanceAdmin) {
       return (
         <div className="flex items-center space-x-2">
           <input
@@ -163,7 +163,7 @@ export default function MembersPage() {
     return (
       <div className="flex items-center space-x-2">
         <span>${amount.toFixed(2)}</span>
-        {isAdmin && (
+        {isFinanceAdmin && (
           <button
             onClick={() => {
               setEditingPayment(userId);
