@@ -1,16 +1,20 @@
+# ⚽ Everest Warriors Pickup Game Manager
+
+A web-based application for organizing, managing, and tracking pickup soccer games. It supports features like team creation, member and guest management, game payments (paid vs. free), admin roles (including finance admin), and AWS-integrated authentication and data storage.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 Visit https://ew-pickup.vercel.app for prod version
 
-# 🛠 EW Pickup Dev Setup & AWS CLI Guide
+# EW Pickup Dev Setup & AWS CLI Guide
 
 This document provides full instructions to set up your local development environment and interact with the DynamoDB Users table using AWS CLI.
 
 ---
 
-## ⚙️ 1. Clone and Setup Project
+## 1. Clone and Setup Project
 
 ```bash
 git clone https://github.com/<your-fork-or-main-repo>.git
@@ -38,7 +42,7 @@ You can find `amplify_outputs.json` already committed. Ensure your values are sy
 
 ---
 
-## 🚀 2. Run the Project Locally
+## 2. Run the Project Locally
 
 ```bash
 npm run dev
@@ -48,7 +52,7 @@ Login via Google OAuth when prompted. On first login, a new user profile will be
 
 ---
 
-## 🔑 3. Authentication
+## 3. Authentication
 
 - **Login Method**: Google OAuth via AWS Cognito
 - **First-Time Users**: Will be redirected to `/profile/edit` to set basic info
@@ -56,7 +60,7 @@ Login via Google OAuth when prompted. On first login, a new user profile will be
 
 ---
 
-## 📁 4. AWS CLI Setup
+## 4. AWS CLI Setup
 
 Install AWS CLI (if not already):
 
@@ -79,17 +83,17 @@ aws configure
 
 ---
 
-## 📦 5. Querying DynamoDB (PartiQL)
+## 5. Querying DynamoDB (PartiQL)
 
 ### Open AWS Console → DynamoDB → PartiQL Editor
 
-#### 🔍 Get all users:
+#### Get all users:
 
 ```sql
 SELECT * FROM "Users"
 ```
 
-#### 🔍 Find user by FirstName:
+#### Find user by FirstName:
 
 ```sql
 SELECT * FROM "Users" WHERE FirstName = 'Madhav'
@@ -97,7 +101,7 @@ SELECT * FROM "Users" WHERE FirstName = 'Madhav'
 
 ---
 
-## ✏️ 6. Update Users to Finance Admin
+## 6. Update Users to Finance Admin
 
 To grant `IsFinanceAdmin = true` for specific `UserId`s:
 
@@ -117,7 +121,7 @@ WHERE UserId = '18e1b3e0-80d1-70d1-da6d-54ba80f08943'
 
 ---
 
-## 🛡 7. Role-Based Access in App
+## 7. Role-Based Access in App
 
 | Role Flag        | Description                                      |
 |------------------|--------------------------------------------------|
@@ -129,7 +133,7 @@ WHERE UserId = '18e1b3e0-80d1-70d1-da6d-54ba80f08943'
 
 ---
 
-## 🧪 8. Testing Payments Editing
+## 8. Testing Payments Editing
 
 To test:
 1. Log in as a user with `IsFinanceAdmin = true`
@@ -139,7 +143,7 @@ To test:
 
 ---
 
-## ✅ 9. Git & Pull Requests
+## 9. Git & Pull Requests
 
 ### Setup Git Auth (one-time):
 
@@ -152,7 +156,7 @@ Use your GitHub **Personal Access Token** when prompted for password.
 
 ---
 
-## 🧠 Notes
+## Notes
 
 - If you face 403 pushing to upstream: make sure you're pushing to your **fork**, not original repo.
 - After PR is merged, pull latest with:
@@ -164,7 +168,7 @@ git pull origin main
 
 ---
 
-## 📬 Questions?
+## Questions?
 
 Contact @rajbaral or project maintainer for:
 
