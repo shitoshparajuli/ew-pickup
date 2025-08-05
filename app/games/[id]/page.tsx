@@ -1,10 +1,9 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { Game } from '@/data/types';
-import { use } from 'react';
 import { getGameById, updateGameStatus } from '@/lib/ddb/games';
 import { getGameParticipants, isUserParticipatingInGame, deleteGameParticipant } from '@/lib/ddb/game-participants';
 import { useAuth } from '@/context/AuthContext';
@@ -17,6 +16,11 @@ import { storeGameTeams, getGameTeams, gameTeamsToArray } from '@/lib/ddb/game-t
 interface Guest {
   name: string;
   rating?: number;
+  approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedAt?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectionReason?: string;
 }
 
 // Define skill level options with corresponding rating values
@@ -46,6 +50,7 @@ export default function GamePage({ params }: GamePageProps) {
   const unwrappedParams = use(params);
   const { id } = unwrappedParams;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isAdmin } = useAuth();
   const [game, setGame] = useState<Game | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
@@ -57,6 +62,7 @@ export default function GamePage({ params }: GamePageProps) {
   const [teams, setTeams] = useState<Player[][]>([]);
   const [selectedTeamCount, setSelectedTeamCount] = useState<2 | 4>(2);
   const [guestCount, setGuestCount] = useState<number>(0);
+  const [showApprovalMessage, setShowApprovalMessage] = useState(false);
   
   useEffect(() => {
     async function loadGame() {
@@ -78,10 +84,12 @@ export default function GamePage({ params }: GamePageProps) {
           const participantsData = await getGameParticipants(id);
           setParticipants(participantsData);
           
-          // Calculate total guest count
+          // Calculate total guest count (only approved guests)
           const totalGuests = participantsData.reduce((count, participant) => {
-            return count + (participant.GuestList && Array.isArray(participant.GuestList) 
-              ? participant.GuestList.length : 0);
+            if (participant.GuestList && Array.isArray(participant.GuestList)) {
+              return count + participant.GuestList.filter((guest: Guest) => guest.approvalStatus === 'APPROVED').length;
+            }
+            return count;
           }, 0);
           setGuestCount(totalGuests);
           
@@ -121,6 +129,16 @@ export default function GamePage({ params }: GamePageProps) {
     
     loadGame();
   }, [id, user]);
+
+  useEffect(() => {
+    // Check if user was redirected from check-in with guest approval pending
+    const guestApproval = searchParams.get('guestApproval');
+    if (guestApproval === 'pending') {
+      setShowApprovalMessage(true);
+      // Remove the parameter from URL
+      router.replace(`/games/${id}`);
+    }
+  }, [searchParams, id, router]);
   
   const handleParticipationAction = async () => {
     if (!user) {
@@ -269,15 +287,19 @@ export default function GamePage({ params }: GamePageProps) {
       participants.forEach(participant => {
         if (participant.GuestList && Array.isArray(participant.GuestList) && participant.GuestList.length > 0) {
           participant.GuestList.forEach((guest: Guest) => {
-            guestPlayers.push({
-              uuid: `guest-${participant.UserId}-${guest.name}`,
-              name: `${guest.name}`,
-              rating: guest.rating || 7, // Use provided rating or default to 7
-              position: ['Midfielder'], // Default position
-              actualPosition: 'Midfielder', // Default position
-              isGuest: true,
-              hostName: `${participant.FirstName} ${participant.LastName}`
-            });
+            // Only include approved guests in team generation
+            if (guest.approvalStatus === 'APPROVED') {
+              guestPlayers.push({
+                uuid: `guest-${participant.UserId}-${guest.name}`,
+                name: `${guest.name}`,
+                rating: guest.rating || 7, // Use provided rating or default to 7
+                position: ['Midfielder'], // Default position
+                actualPosition: 'Midfielder', // Default position
+                isGuest: true,
+                hostName: `${participant.FirstName} ${participant.LastName}`,
+                approvalStatus: guest.approvalStatus
+              });
+            }
           });
         }
       });
@@ -386,6 +408,12 @@ export default function GamePage({ params }: GamePageProps) {
             </div>
           )}
 
+          {/* Guest Approval Message */}
+          {showApprovalMessage && (
+            <div className="bg-blue-100 text-blue-800 px-4 py-3 rounded mb-6 font-medium">
+              ✅ Your guest registration has been submitted! Your guests are now pending admin approval. You'll be able to see their approval status on this page once reviewed.
+            </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div>
@@ -559,14 +587,34 @@ export default function GamePage({ params }: GamePageProps) {
                         return dateA - dateB; // Ascending order (earliest first)
                       })
                       .flatMap(participant => 
-                        participant.GuestList.map((guest: Guest, guestIndex: number) => (
-                          <div key={`guest-${participant.UserId}-${guestIndex}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">
-                            <span className="font-medium">{guest.name}</span>
-                            <span className="block text-xs text-gray-500 dark:text-gray-400">
-                              Guest of {participant.FirstName} {participant.LastName}
-                            </span>
-                          </div>
-                        ))
+                        participant.GuestList.map((guest: Guest, guestIndex: number) => {
+                          const getStatusBadge = (status?: string) => {
+                            switch (status) {
+                              case 'APPROVED':
+                                return <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Approved</span>;
+                              case 'REJECTED':
+                                return <span className="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Rejected</span>;
+                              case 'PENDING':
+                              default:
+                                return <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Pending</span>;
+                            }
+                          };
+
+                          return (
+                            <div key={`guest-${participant.UserId}-${guestIndex}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-3 text-center shadow-sm hover:shadow-md transition-shadow dark:text-gray-200">
+                              <span className="font-medium">{guest.name}</span>
+                              <span className="block text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                Guest of {participant.FirstName} {participant.LastName}
+                              </span>
+                              {getStatusBadge(guest.approvalStatus)}
+                              {guest.rejectionReason && (
+                                <div className="mt-1 text-xs text-red-600 dark:text-red-400">
+                                  Reason: {guest.rejectionReason}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
                       )
                     }
                   </div>

@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useEffect, useState } from "react";
 import { getNextGame } from "@/lib/ddb/games";
 import { isUserParticipatingInGame } from "@/lib/ddb/game-participants";
+import { getPendingGuestApprovals } from "@/lib/ddb/game-participants";
 
 export default function HomePage() {
   const { user, loading, signIn, isAdmin, isMember } = useAuth();
@@ -14,6 +15,7 @@ export default function HomePage() {
   const [loadingGame, setLoadingGame] = useState(false);
   const [isParticipating, setIsParticipating] = useState(false);
   const [checkingParticipation, setCheckingParticipation] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
 
   useEffect(() => {
     async function fetchNextGame() {
@@ -45,8 +47,20 @@ export default function HomePage() {
       }
     }
 
+    async function fetchPendingApprovals() {
+      if (isAdmin) {
+        try {
+          const pendingGuests = await getPendingGuestApprovals({ checkGameStatus: true, includeAllGames: false });
+          setPendingApprovals(pendingGuests.length);
+        } catch (error) {
+          console.error("Failed to fetch pending approvals:", error);
+        }
+      }
+    }
+
     fetchNextGame();
-  }, [isAuthenticated, user]);
+    fetchPendingApprovals();
+  }, [isAuthenticated, user, isAdmin]);
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -63,6 +77,21 @@ export default function HomePage() {
         <p className="text-xl mb-8">
           Join us for pick-up games and let's have fun!
         </p>
+
+        {/* Admin Dashboard */}
+        {isAdmin && pendingApprovals > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold text-yellow-800 mb-2">Admin Dashboard</h2>
+            <p className="text-yellow-700 mb-4">
+              You have {pendingApprovals} guest approval{pendingApprovals !== 1 ? 's' : ''} pending review for upcoming games.
+            </p>
+            <Link href="/admin/guest-approvals">
+              <button className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md font-medium">
+                Review Approvals
+              </button>
+            </Link>
+          </div>
+        )}
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
           <h2 className="text-2xl font-bold mb-4 dark:text-white">Next Game</h2>

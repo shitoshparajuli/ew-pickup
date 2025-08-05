@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { NavLinkProps } from "@/data/types";
 import { useState } from "react";
-import { Menu, X, Home, Volleyball, User, Users } from "lucide-react";
+import { Menu, X, Home, Volleyball, User, Users, Shield } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { user, loading, signIn, signOut } = useAuth();
+  const { user, loading, signIn, signOut, isAdmin } = useAuth();
   const isAuthenticated = !!user;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -51,6 +51,17 @@ export default function Navbar() {
               <span className="text-sm">Members</span>
             </div>
           </NavLink>
+          
+          {isAdmin && (
+            <NavLink href="/admin/guest-approvals" active={pathname === "/admin/guest-approvals"} aria-label="Guest Approvals">
+              <div className="flex items-center">
+                <Shield size={18} className="mr-2" />
+                <span className="text-sm">Guest Approvals</span>
+              </div>
+            </NavLink>
+          )}
+          
+
           
           {isAuthenticated && (
             <NavLink href="/profile" active={pathname === "/profile"} aria-label="Profile">
@@ -126,6 +137,17 @@ export default function Navbar() {
                 <span>Members</span>
               </div>
             </NavLink>
+            
+            {isAdmin && (
+              <NavLink href="/admin/guest-approvals" active={pathname === "/admin/guest-approvals"} onClick={toggleMenu}>
+                <div className="flex items-center">
+                  <Shield size={20} className="mr-3" />
+                  <span>Guest Approvals</span>
+                </div>
+              </NavLink>
+            )}
+            
+
             
             {isAuthenticated && (
               <NavLink href="/profile" active={pathname === "/profile"} onClick={toggleMenu}>

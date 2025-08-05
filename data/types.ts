@@ -94,6 +94,7 @@ export interface Player {
   actualPosition: Position | null;
   isGuest?: boolean;
   hostName?: string;
+  approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
 export interface Team {
@@ -105,4 +106,16 @@ export interface TeamStats {
   averageRating: number;
   positionCounts: Record<Position, number>;
   stdDev: number;
+}
+
+// Add new interface for guest approval
+export interface GuestApproval {
+  gameId: string;
+  hostUserId: string;
+  guestName: string;
+  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedAt: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectionReason?: string;
 }
