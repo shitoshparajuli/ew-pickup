@@ -24,7 +24,15 @@ function CheckInContent() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [guests, setGuests] = useState(0);
-  const [guestsList, setGuestsList] = useState<Array<{name: string, rating: number}>>([]);
+  const [guestsList, setGuestsList] = useState<Array<{
+    name: string, 
+    rating: number,
+    approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED',
+    requestedAt: string,
+    approvedAt?: string,
+    approvedBy?: string,
+    rejectionReason?: string
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -83,10 +91,15 @@ function CheckInContent() {
     
     // Adjust the guestsList array based on new count
     if (count > guestsList.length) {
-      // Add new empty guest entries with default rating of 6 (Intermediate)
+      // Add new empty guest entries with default rating of 6 (Intermediate) and PENDING status
       const newGuests = [...guestsList];
       for (let i = guestsList.length; i < count; i++) {
-        newGuests.push({ name: '', rating: 6 });
+        newGuests.push({ 
+          name: '', 
+          rating: 6,
+          approvalStatus: 'PENDING' as const,
+          requestedAt: new Date().toISOString()
+        });
       }
       setGuestsList(newGuests);
     } else if (count < guestsList.length) {
@@ -145,7 +158,7 @@ function CheckInContent() {
       }
       
       // Redirect to the game page
-      router.push(`/games/${gameId}`);
+      router.push(`/games/${gameId}?guestApproval=pending`);
     } catch (error) {
       console.error("Error saving participant data:", error);
       setError('Failed to save check-in data. Please try again.');
@@ -234,6 +247,11 @@ function CheckInContent() {
             {guests > 0 && (
               <div className="mb-6">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Guest Information</h3>
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Note:</strong> Guest registrations require admin approval before they can participate in games. You'll be notified once your guests are approved.
+                  </p>
+                </div>
                 {guestsList.map((guest, index) => (
                   <div key={index} className="mb-4 p-3 border border-gray-200 dark:border-gray-700 rounded-md">
                     <h4 className="text-sm font-medium mb-2">Guest {index + 1}</h4>
