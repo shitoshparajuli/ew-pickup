@@ -114,49 +114,7 @@ export default function GuestApprovalsPage() {
     }
   };
 
-  const createTestGuest = async () => {
-    try {
-      console.log('Creating test guest...');
-      
-      // Find a paid game to add the test guest to
-      const { getUpcomingGames } = await import('@/lib/ddb/games');
-      const upcomingGames = await getUpcomingGames(10);
-      const paidGame = upcomingGames.find(game => game.isPaid);
-      
-      if (!paidGame) {
-        alert('No paid upcoming games found. Please create a paid game first.');
-        return;
-      }
-      
-      console.log('Found paid game for test guest:', paidGame.id);
-      
-      // Create a test participant with a pending guest
-      const testGuest = {
-        name: `Test Guest ${Date.now()}`,
-        rating: 7,
-        approvalStatus: 'PENDING' as const,
-        requestedAt: new Date().toISOString()
-      };
-      
-      await createGameParticipant({
-        gameId: paidGame.id,
-        userId: user?.username || 'test-user',
-        firstName: 'Test',
-        lastName: 'Host',
-        guestList: [testGuest]
-      });
-      
-      console.log('Test guest created successfully');
-      
-      // Refresh the list
-      const updatedGuests = await getPendingGuestApprovals({ checkGameStatus: true, includeAllGames: false });
-      setPendingGuests(updatedGuests);
-      alert(`Test guest created successfully for paid game ${paidGame.id}!`);
-    } catch (error) {
-      console.error('Error creating test guest:', error);
-      alert('Error creating test guest: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
-  };
+
 
   const checkDatabase = async () => {
     try {
@@ -236,12 +194,6 @@ Check console for detailed breakdown.
             Use these tools to manage guest approvals and test the system.
           </p>
           <div className="flex gap-3">
-            <button
-              onClick={createTestGuest}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium"
-            >
-              Create Test Guest
-            </button>
             <button
               onClick={checkDatabase}
               className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md font-medium"
