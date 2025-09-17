@@ -23,8 +23,8 @@ function CheckInContent() {
   const { user, loading: authLoading } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [guests, setGuests] = useState(0);
-  const [guestsList, setGuestsList] = useState<Array<{name: string, rating: number}>>([]);
+  // const [guests, setGuests] = useState(0);
+  // const [guestsList, setGuestsList] = useState<Array<{name: string, rating: number}>>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -68,32 +68,32 @@ function CheckInContent() {
     }
   }, [gameId, loading, authLoading]);
 
-  const handleGuestChange = (index: number, field: 'name' | 'rating', value: string | number) => {
-    const updatedGuests = [...guestsList];
-    updatedGuests[index] = { 
-      ...updatedGuests[index], 
-      [field]: value 
-    };
-    setGuestsList(updatedGuests);
-  };
+  // const handleGuestChange = (index: number, field: 'name' | 'rating', value: string | number) => {
+  //   const updatedGuests = [...guestsList];
+  //   updatedGuests[index] = { 
+  //     ...updatedGuests[index], 
+  //     [field]: value 
+  //   };
+  //   setGuestsList(updatedGuests);
+  // };
 
-  const updateGuestCount = (newCount: number) => {
-    const count = Math.max(0, newCount);
-    setGuests(count);
-    
-    // Adjust the guestsList array based on new count
-    if (count > guestsList.length) {
-      // Add new empty guest entries with default rating of 6 (Intermediate)
-      const newGuests = [...guestsList];
-      for (let i = guestsList.length; i < count; i++) {
-        newGuests.push({ name: '', rating: 6 });
-      }
-      setGuestsList(newGuests);
-    } else if (count < guestsList.length) {
-      // Remove excess guest entries
-      setGuestsList(guestsList.slice(0, count));
-    }
-  };
+  // const updateGuestCount = (newCount: number) => {
+  //   const count = Math.max(0, newCount);
+  //   setGuests(count);
+  //   
+  //   // Adjust the guestsList array based on new count
+  //   if (count > guestsList.length) {
+  //     // Add new empty guest entries with default rating of 6 (Intermediate)
+  //     const newGuests = [...guestsList];
+  //     for (let i = guestsList.length; i < count; i++) {
+  //       newGuests.push({ name: '', rating: 6 });
+  //     }
+  //     setGuestsList(newGuests);
+  //   } else if (count < guestsList.length) {
+  //     // Remove excess guest entries
+  //     setGuestsList(guestsList.slice(0, count));
+  //   }
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,37 +112,34 @@ function CheckInContent() {
       setSubmitting(true);
       setError('');
       
-      // Filter out entries with empty names
-      const guestList = guestsList.filter(guest => guest.name.trim());
-      
-      // Save the participant data
+      // Save the participant data (no guests for now)
       await createGameParticipant({
         gameId,
         userId: user.userId,
         firstName,
         lastName,
-        guestList
+        guestList: [] // Guests feature disabled
       });
       
-      // Update the user's PaymentDue field if there are guests
-      if (guestList.length > 0) {
-        // Get the current user profile
-        const userProfile = await getUserProfile(user.userId);
-        
-        // Calculate the payment due amount
-        const currentPaymentDue = userProfile?.PaymentDue || 0;
-        // Fetch the game from DDB
-        const game = await getGameById(gameId);
-        const guestFee = game?.isPaid ? (game?.guestFee ?? 0) : 0;
-        const additionalPayment = guestList.length * guestFee;
+      // // Update the user's PaymentDue field if there are guests
+      // if (guestList.length > 0) {
+      //   // Get the current user profile
+      //   const userProfile = await getUserProfile(user.userId);
+      //   
+      //   // Calculate the payment due amount
+      //   const currentPaymentDue = userProfile?.PaymentDue || 0;
+      //   // Fetch the game from DDB
+      //   const game = await getGameById(gameId);
+      //   const guestFee = game?.isPaid ? (game?.guestFee ?? 0) : 0;
+      //   const additionalPayment = guestList.length * guestFee;
 
-        const newPaymentDue = currentPaymentDue + additionalPayment;
-        
-        // Update the user profile with the new PaymentDue amount
-        await updateUserProfile(user.userId, {
-          PaymentDue: newPaymentDue
-        });
-      }
+      //   const newPaymentDue = currentPaymentDue + additionalPayment;
+      //   
+      //   // Update the user profile with the new PaymentDue amount
+      //   await updateUserProfile(user.userId, {
+      //     PaymentDue: newPaymentDue
+      //   });
+      // }
       
       // Redirect to the game page
       router.push(`/games/${gameId}`);
@@ -200,7 +197,7 @@ function CheckInContent() {
                 required
               />
             </div>
-            
+            {/*
             <div className="mb-6">
               <label htmlFor="guests" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Number of Guests
@@ -230,7 +227,6 @@ function CheckInContent() {
                 </button>
               </div>
             </div>
-            
             {guests > 0 && (
               <div className="mb-6">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Guest Information</h3>
@@ -277,7 +273,12 @@ function CheckInContent() {
                 ))}
               </div>
             )}
-            
+            */}
+            <div className="mb-6">
+              <div className="text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900 rounded-md p-3 text-center">
+                The guest check-in feature is currently unavailable. Please check in as a player only.
+              </div>
+            </div>
             <div className="flex justify-between">
               <button
                 type="button"
@@ -311,4 +312,4 @@ export default function CheckInPage() {
       <CheckInContent />
     </Suspense>
   );
-} 
+}
